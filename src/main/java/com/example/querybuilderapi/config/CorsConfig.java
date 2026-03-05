@@ -32,6 +32,3 @@ public class CorsConfig {
         return source.getCorsFilter();
     }
 }
-        return new CorsFilter(source);
-    }
-}
