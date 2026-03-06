@@ -21,19 +21,9 @@ public class CorsConfig {
 
     @Bean
     public CorsFilter corsFilter() {
-        // sanitize origins: strip trailing slash if present
-        List<String> sanitized = allowedOrigins.stream()
-                .map(o -> o.endsWith("/") ? o.substring(0, o.length()-1) : o)
-                .toList();
-        System.out.println("[CorsConfig] allowedOrigins=" + sanitized);
-
+        // temporarily allow every origin pattern to remove CORS as a blocker
         CorsConfiguration config = new CorsConfiguration();
-        if (sanitized.stream().anyMatch(o -> o.equals("*") || o.contains("*"))) {
-            // wildcard present: use origin patterns instead of exact list
-            config.setAllowedOriginPatterns(sanitized);
-        } else {
-            config.setAllowedOrigins(sanitized);
-        }
+        config.setAllowedOriginPatterns(List.of("*"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
