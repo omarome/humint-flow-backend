@@ -41,7 +41,7 @@ public class AuthControllerTest {
         request.setDisplayName("Test User");
 
         AuthResponse response = new AuthResponse("access", "refresh", 900, 
-            new AuthResponse.UserInfo(1L, "test@example.com", "Test User", "USER"));
+            new AuthResponse.UserInfo(1L, "test@example.com", "Test User", "USER", null));
 
         Mockito.when(authService.register(any(RegisterRequest.class))).thenReturn(response);
 
@@ -58,7 +58,7 @@ public class AuthControllerTest {
         LoginRequest request = new LoginRequest("test@example.com", "password123");
         
         AuthResponse response = new AuthResponse("access", "refresh", 900, 
-            new AuthResponse.UserInfo(1L, "test@example.com", "Test User", "USER"));
+            new AuthResponse.UserInfo(1L, "test@example.com", "Test User", "USER", null));
 
         Mockito.when(authService.login(any(LoginRequest.class))).thenReturn(response);
 
