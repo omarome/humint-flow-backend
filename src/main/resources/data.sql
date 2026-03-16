@@ -23,7 +23,22 @@ VALUES
     ('Edward', 'Miller', 41, 'edward.miller@example.com', 'Inactive', false, 'Ed', 'employee'),
     ('Fiona', 'Wilson', 33, 'fiona.wilson@example.com', 'Active', true, NULL, 'student'),
     ('George', 'Moore', 38, 'george.moore@example.com', 'Pending', false, 'Geo', 'unemployed'),
-    ('Helen', 'Taylor', 26, 'helen.taylor@example.com', 'Active', true, NULL, 'employee')
+    ('Helen', 'Taylor', 26, 'helen.taylor@example.com', 'Active', true, NULL, 'employee'),
+    ('Ian', 'Wright', 42, 'ian.wright@example.com', 'Active', false, 'Wrighty', 'retired'),
+    ('Julia', 'Roberts', 31, 'julia.roberts@example.com', 'Pending', true, 'Jules', 'employee'),
+    ('Kevin', 'Hart', 22, 'kevin.hart@example.com', 'Active', true, 'Kev', 'student'),
+    ('Linda', 'Hamilton', 55, 'linda.hamilton@example.com', 'Inactive', false, NULL, 'retired'),
+    ('Michael', 'Jordan', 39, 'michael.jordan@example.com', 'Active', true, 'MJ', 'employee'),
+    ('Nancy', 'Drew', 24, 'nancy.drew@example.com', 'Active', false, 'Nan', 'student'),
+    ('Oliver', 'Twist', 48, 'oliver.twist@example.com', 'Pending', false, 'Ollie', 'unemployed'),
+    ('Pamela', 'Anderson', 36, 'pamela.anderson@example.com', 'Active', true, 'Pam', 'employee'),
+    ('Quinn', 'Mallory', 29, 'quinn.mallory@example.com', 'Inactive', false, 'Q', 'student'),
+    ('Rachel', 'Green', 34, 'rachel.green@example.com', 'Active', true, 'Rach', 'employee'),
+    ('Steven', 'Spielberg', 62, 'steven.spielberg@example.com', 'Active', false, 'Steve', 'retired'),
+    ('Tina', 'Fey', 45, 'tina.fey@example.com', 'Pending', true, NULL, 'employee'),
+    ('Uma', 'Thurman', 37, 'uma.thurman@example.com', 'Active', false, NULL, 'employee'),
+    ('Victor', 'Hugo', 51, 'victor.hugo@example.com', 'Inactive', false, 'Vic', 'unemployed'),
+    ('Wendy', 'Darling', 21, 'wendy.darling@example.com', 'Active', true, 'Wen', 'student')
 ON CONFLICT (email) DO UPDATE 
 SET user_type = EXCLUDED.user_type;
 

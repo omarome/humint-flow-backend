@@ -1,0 +1,104 @@
+package com.example.querybuilderapi.model;
+
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDateTime;
+
+/**
+ * Entity to store saved filter views.
+ */
+@Entity
+@Table(name = "saved_views")
+public class SavedView {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotBlank
+    @Size(max = 100)
+    @Column(nullable = false, length = 100)
+    private String name;
+
+    @Column(columnDefinition = "TEXT", nullable = false)
+    private String queryJson;
+
+    @CreationTimestamp
+    @Column(updatable = false)
+    private LocalDateTime createdAt;
+
+    public SavedView() {
+    }
+
+    public SavedView(Long id, String name, String queryJson, LocalDateTime createdAt) {
+        this.id = id;
+        this.name = name;
+        this.queryJson = queryJson;
+        this.createdAt = createdAt;
+    }
+
+    // Builder-like static method for convenience
+    public static SavedViewBuilder builder() {
+        return new SavedViewBuilder();
+    }
+
+    // --- Getters & Setters ---
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getQueryJson() {
+        return queryJson;
+    }
+
+    public void setQueryJson(String queryJson) {
+        this.queryJson = queryJson;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    // Simple Builder inner class
+    public static class SavedViewBuilder {
+        private String name;
+        private String queryJson;
+
+        public SavedViewBuilder name(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public SavedViewBuilder queryJson(String queryJson) {
+            this.queryJson = queryJson;
+            return this;
+        }
+
+        public SavedView build() {
+            SavedView view = new SavedView();
+            view.setName(this.name);
+            view.setQueryJson(this.queryJson);
+            return view;
+        }
+    }
+}
