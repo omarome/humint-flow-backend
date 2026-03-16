@@ -29,7 +29,7 @@ class UserRepositoryTest {
     @DisplayName("save and findById returns the saved user")
     void saveAndFindById() {
         User user = new User(null, "John", "Doe", 28,
-                "john.doe@example.com", "Active", "Johnny", true);
+                "john.doe@example.com", "Active", "Johnny", true, "student");
 
         User saved = userRepository.save(user);
 
@@ -46,9 +46,9 @@ class UserRepositoryTest {
     @DisplayName("findAll returns all saved users")
     void findAll() {
         userRepository.save(new User(null, "John", "Doe", 28,
-                "john.doe@example.com", "Active", "Johnny", true));
+                "john.doe@example.com", "Active", "Johnny", true, "student"));
         userRepository.save(new User(null, "Jane", "Smith", 32,
-                "jane.smith@example.com", "Active", null, false));
+                "jane.smith@example.com", "Active", null, false, "employee"));
 
         List<User> users = userRepository.findAll();
 
@@ -67,7 +67,7 @@ class UserRepositoryTest {
     @DisplayName("deleteById removes the user")
     void deleteById() {
         User saved = userRepository.save(new User(null, "John", "Doe", 28,
-                "john.doe@example.com", "Active", "Johnny", true));
+                "john.doe@example.com", "Active", "Johnny", true, "student"));
 
         userRepository.deleteById(saved.getId());
 
@@ -81,9 +81,9 @@ class UserRepositoryTest {
         assertThat(userRepository.count()).isZero();
 
         userRepository.save(new User(null, "John", "Doe", 28,
-                "john.doe@example.com", "Active", "Johnny", true));
+                "john.doe@example.com", "Active", "Johnny", true, "student"));
         userRepository.save(new User(null, "Jane", "Smith", 32,
-                "jane.smith@example.com", "Active", null, false));
+                "jane.smith@example.com", "Active", null, false, "employee"));
 
         assertThat(userRepository.count()).isEqualTo(2);
     }

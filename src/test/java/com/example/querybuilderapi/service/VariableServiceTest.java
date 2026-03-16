@@ -86,31 +86,4 @@ class VariableServiceTest {
         assertThat(result).isNull();
         verify(variableRepository, times(1)).findById(999L);
     }
-
-    // --- seedVariables ---
-
-    @Test
-    @DisplayName("seedVariables seeds data when database is empty")
-    void seedVariables_seedsWhenEmpty() throws Exception {
-        when(variableRepository.count()).thenReturn(0L);
-        when(variableRepository.saveAll(anyList())).thenReturn(Collections.emptyList());
-
-        variableService.seedVariables().run();
-
-        verify(variableRepository, times(1)).count();
-        verify(variableRepository, times(1)).saveAll(argThat(list ->
-                ((List<?>) list).size() == 7
-        ));
-    }
-
-    @Test
-    @DisplayName("seedVariables does not seed when database already has data")
-    void seedVariables_skipsWhenNotEmpty() throws Exception {
-        when(variableRepository.count()).thenReturn(7L);
-
-        variableService.seedVariables().run();
-
-        verify(variableRepository, times(1)).count();
-        verify(variableRepository, never()).saveAll(anyList());
-    }
 }

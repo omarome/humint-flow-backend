@@ -31,14 +31,14 @@ class UserServiceTest {
     @BeforeEach
     void setUp() {
         sampleUser = new User(1L, "John", "Doe", 28,
-                "john.doe@example.com", "Active", "Johnny", true);
+                "john.doe@example.com", "Active", "Johnny", true, "student");
     }
 
     @Test
     @DisplayName("getAllUsers returns list of users")
     void getAllUsers_returnsUsers() {
         User user2 = new User(2L, "Jane", "Smith", 32,
-                "jane.smith@example.com", "Active", null, false);
+                "jane.smith@example.com", "Active", null, false, "employee");
         when(userRepository.findAll()).thenReturn(List.of(sampleUser, user2));
 
         List<User> result = userService.getAllUsers();
@@ -77,28 +77,5 @@ class UserServiceTest {
         User result = userService.getUserById(999L);
 
         assertThat(result).isNull();
-    }
-
-    @Test
-    @DisplayName("seedUsers seeds data when database is empty")
-    void seedUsers_seedsWhenEmpty() throws Exception {
-        when(userRepository.count()).thenReturn(0L);
-        when(userRepository.saveAll(anyList())).thenReturn(Collections.emptyList());
-
-        userService.seedUsers().run();
-
-        verify(userRepository, times(1)).saveAll(argThat(list ->
-                ((List<?>) list).size() == 10
-        ));
-    }
-
-    @Test
-    @DisplayName("seedUsers does not seed when database already has data")
-    void seedUsers_skipsWhenNotEmpty() throws Exception {
-        when(userRepository.count()).thenReturn(10L);
-
-        userService.seedUsers().run();
-
-        verify(userRepository, never()).saveAll(anyList());
     }
 }

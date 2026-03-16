@@ -36,9 +36,9 @@ class UserControllerTest {
     @DisplayName("GET /api/users returns 200 and list of users")
     void getAllUsers_returnsOk() throws Exception {
         User user1 = new User(1L, "John", "Doe", 28,
-                "john.doe@example.com", "Active", "Johnny", true);
+                "john.doe@example.com", "Active", "Johnny", true, "student");
         User user2 = new User(2L, "Jane", "Smith", 32,
-                "jane.smith@example.com", "Active", null, false);
+                "jane.smith@example.com", "Active", null, false, "employee");
 
         when(userService.getAllUsers()).thenReturn(List.of(user1, user2));
 
@@ -73,7 +73,7 @@ class UserControllerTest {
     @DisplayName("GET /api/users/1 returns 200 and user when found")
     void getUserById_found() throws Exception {
         User user = new User(1L, "John", "Doe", 28,
-                "john.doe@example.com", "Active", "Johnny", true);
+                "john.doe@example.com", "Active", "Johnny", true, "student");
 
         when(userService.getUserById(1L)).thenReturn(user);
 

@@ -42,11 +42,14 @@ public class User {
     @Column(name = "is_online")
     private Boolean isOnline;
 
+    @Column(name = "user_type")
+    private String userType;
+
     public User() {
     }
 
     public User(Long id, String firstName, String lastName, Integer age,
-                String email, String status, String nickname, Boolean isOnline) {
+                String email, String status, String nickname, Boolean isOnline, String userType) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
@@ -55,6 +58,7 @@ public class User {
         this.status = status;
         this.nickname = nickname;
         this.isOnline = isOnline;
+        this.userType = userType;
     }
 
     // --- Getters & Setters ---
@@ -121,5 +125,13 @@ public class User {
 
     public void setIsOnline(Boolean isOnline) {
         this.isOnline = isOnline;
+    }
+
+    public String getUserType() {
+        return userType;
+    }
+
+    public void setUserType(String userType) {
+        this.userType = userType;
     }
 }
