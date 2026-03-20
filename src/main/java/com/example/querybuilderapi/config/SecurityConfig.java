@@ -25,6 +25,8 @@ import com.example.querybuilderapi.dto.AuthResponse;
 import java.util.Arrays;
 import java.util.List;
 
+import com.example.querybuilderapi.security.HttpCookieOAuth2AuthorizationRequestRepository;
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -36,9 +38,11 @@ public class SecurityConfig {
     private String frontendUrl;
 
     private final AuthService authService;
+    private final HttpCookieOAuth2AuthorizationRequestRepository cookieAuthorizationRequestRepository;
 
-    public SecurityConfig(AuthService authService) {
+    public SecurityConfig(AuthService authService, HttpCookieOAuth2AuthorizationRequestRepository cookieAuthorizationRequestRepository) {
         this.authService = authService;
+        this.cookieAuthorizationRequestRepository = cookieAuthorizationRequestRepository;
     }
 
     @Bean
@@ -87,6 +91,9 @@ public class SecurityConfig {
             )
             // OAuth2 Login configuration
             .oauth2Login(oauth2 -> oauth2
+                .authorizationEndpoint(endpoint -> endpoint
+                    .authorizationRequestRepository(cookieAuthorizationRequestRepository)
+                )
                 .successHandler(oauth2SuccessHandler())
             )
             // Insert JWT filter before UsernamePasswordAuthenticationFilter
@@ -107,6 +114,8 @@ public class SecurityConfig {
     @Bean
     public AuthenticationSuccessHandler oauth2SuccessHandler() {
         return (request, response, authentication) -> {
+            cookieAuthorizationRequestRepository.removeAuthorizationRequestCookies(request, response);
+
             OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
             String email = oAuth2User.getAttribute("email");
             String name = oAuth2User.getAttribute("name");
