@@ -36,9 +36,9 @@ class UserControllerTest {
     @DisplayName("GET /api/users returns 200 and list of users")
     void getAllUsers_returnsOk() throws Exception {
         User user1 = new User(1L, "John", "Doe", 28,
-                "john.doe@example.com", "Active", "Johnny", true, "student");
+                "john.doe@example.com", "Active", true, "student");
         User user2 = new User(2L, "Jane", "Smith", 32,
-                "jane.smith@example.com", "Active", null, false, "employee");
+                "jane.smith@example.com", "Active", false, "employee");
 
         when(userService.getAllUsers()).thenReturn(List.of(user1, user2));
 
@@ -52,8 +52,7 @@ class UserControllerTest {
                 .andExpect(jsonPath("$[0].email", is("john.doe@example.com")))
                 .andExpect(jsonPath("$[0].isOnline", is(true)))
                 .andExpect(jsonPath("$[1].id", is(2)))
-                .andExpect(jsonPath("$[1].firstName", is("Jane")))
-                .andExpect(jsonPath("$[1].nickname", nullValue()));
+                .andExpect(jsonPath("$[1].firstName", is("Jane")));
     }
 
     @Test
@@ -73,7 +72,7 @@ class UserControllerTest {
     @DisplayName("GET /api/users/1 returns 200 and user when found")
     void getUserById_found() throws Exception {
         User user = new User(1L, "John", "Doe", 28,
-                "john.doe@example.com", "Active", "Johnny", true, "student");
+                "john.doe@example.com", "Active", true, "student");
 
         when(userService.getUserById(1L)).thenReturn(user);
 
@@ -86,7 +85,6 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.age", is(28)))
                 .andExpect(jsonPath("$.email", is("john.doe@example.com")))
                 .andExpect(jsonPath("$.status", is("Active")))
-                .andExpect(jsonPath("$.nickname", is("Johnny")))
                 .andExpect(jsonPath("$.isOnline", is(true)));
     }
 
