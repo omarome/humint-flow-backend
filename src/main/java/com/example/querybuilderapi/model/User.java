@@ -2,6 +2,8 @@ package com.example.querybuilderapi.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * User entity matching the React frontend data shape.
@@ -17,10 +19,12 @@ public class User {
 
     @Column(name = "first_name", nullable = false)
     @NotBlank(message = "First name is required")
+    @JsonIgnore
     private String firstName;
 
     @Column(name = "last_name", nullable = false)
     @NotBlank(message = "Last name is required")
+    @JsonIgnore
     private String lastName;
 
     @Column(nullable = false)
@@ -37,8 +41,6 @@ public class User {
     @NotBlank(message = "Status is required")
     private String status;
 
-    private String nickname;
-
     @Column(name = "is_online")
     private Boolean isOnline;
 
@@ -48,15 +50,19 @@ public class User {
     public User() {
     }
 
+    @JsonProperty("fullName")
+    public String getFullName() {
+        return ((firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "")).trim();
+    }
+
     public User(Long id, String firstName, String lastName, Integer age,
-                String email, String status, String nickname, Boolean isOnline, String userType) {
+                String email, String status, Boolean isOnline, String userType) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
         this.age = age;
         this.email = email;
         this.status = status;
-        this.nickname = nickname;
         this.isOnline = isOnline;
         this.userType = userType;
     }
@@ -109,14 +115,6 @@ public class User {
 
     public void setStatus(String status) {
         this.status = status;
-    }
-
-    public String getNickname() {
-        return nickname;
-    }
-
-    public void setNickname(String nickname) {
-        this.nickname = nickname;
     }
 
     public Boolean getIsOnline() {
