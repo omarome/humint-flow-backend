@@ -16,6 +16,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.hamcrest.Matchers.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -47,12 +48,11 @@ class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[0].id", is(1)))
-                .andExpect(jsonPath("$[0].firstName", is("John")))
-                .andExpect(jsonPath("$[0].lastName", is("Doe")))
+                .andExpect(jsonPath("$[0].fullName", is("John Doe")))
                 .andExpect(jsonPath("$[0].email", is("john.doe@example.com")))
                 .andExpect(jsonPath("$[0].isOnline", is(true)))
                 .andExpect(jsonPath("$[1].id", is(2)))
-                .andExpect(jsonPath("$[1].firstName", is("Jane")));
+                .andExpect(jsonPath("$[1].fullName", is("Jane Smith")));
     }
 
     @Test
@@ -64,6 +64,27 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("GET /api/users?sortBy=age&sortDir=desc returns users sorted by age descending")
+    void getAllUsers_sorted() throws Exception {
+        User older = new User(2L, "Jane", "Smith", 32,
+                "jane.smith@example.com", "Active", false, "employee");
+        User younger = new User(1L, "John", "Doe", 28,
+                "john.doe@example.com", "Active", true, "student");
+
+        when(userService.getAllUsers(any(org.springframework.data.domain.Sort.class)))
+                .thenReturn(List.of(older, younger));
+
+        mockMvc.perform(get("/api/users")
+                        .param("sortBy", "age")
+                        .param("sortDir", "desc")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].age", is(32)))
+                .andExpect(jsonPath("$[1].age", is(28)));
     }
 
     // --- GET /api/users/{id} ---
@@ -80,8 +101,7 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", is(1)))
-                .andExpect(jsonPath("$.firstName", is("John")))
-                .andExpect(jsonPath("$.lastName", is("Doe")))
+                .andExpect(jsonPath("$.fullName", is("John Doe")))
                 .andExpect(jsonPath("$.age", is(28)))
                 .andExpect(jsonPath("$.email", is("john.doe@example.com")))
                 .andExpect(jsonPath("$.status", is("Active")))
