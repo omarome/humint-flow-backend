@@ -82,8 +82,8 @@ public class SecurityConfig {
                     "/api/auth/refresh",
                     "/api/auth/oauth2/**"
                 ).permitAll()
-                // Actuator health for Docker healthcheck
-                .requestMatchers("/actuator/health").permitAll()
+                // Health check for Docker & Render keep-alive
+                .requestMatchers("/api/health", "/actuator/health").permitAll()
                 // All other /api/** require authentication
                 .requestMatchers("/api/**").authenticated()
                 // Everything else (static, etc.) is open
