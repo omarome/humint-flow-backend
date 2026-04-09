@@ -28,8 +28,8 @@ class UserRepositoryTest {
     @Test
     @DisplayName("save and findById returns the saved user")
     void saveAndFindById() {
-        User user = new User(null, "John", "Doe", 28,
-                "john.doe@example.com", "Active", true, "student");
+        User user = new User(null, "John", "Doe",
+                "john.doe@example.com", "Active", true, "Sales", "Inside Sales");
 
         User saved = userRepository.save(user);
 
@@ -45,10 +45,10 @@ class UserRepositoryTest {
     @Test
     @DisplayName("findAll returns all saved users")
     void findAll() {
-        userRepository.save(new User(null, "John", "Doe", 28,
-                "john.doe@example.com", "Active", true, "student"));
-        userRepository.save(new User(null, "Jane", "Smith", 32,
-                "jane.smith@example.com", "Active", false, "employee"));
+        userRepository.save(new User(null, "John", "Doe",
+                "john.doe@example.com", "Active", true, "Sales", "Inside Sales"));
+        userRepository.save(new User(null, "Jane", "Smith",
+                "jane.smith@example.com", "Active", false, "Manager", "Sales"));
 
         List<User> users = userRepository.findAll();
 
@@ -66,8 +66,8 @@ class UserRepositoryTest {
     @Test
     @DisplayName("deleteById removes the user")
     void deleteById() {
-        User saved = userRepository.save(new User(null, "John", "Doe", 28,
-                "john.doe@example.com", "Active", true, "student"));
+        User saved = userRepository.save(new User(null, "John", "Doe",
+                "john.doe@example.com", "Active", true, "Sales", "Inside Sales"));
 
         userRepository.deleteById(saved.getId());
 
@@ -80,10 +80,10 @@ class UserRepositoryTest {
     void count() {
         assertThat(userRepository.count()).isZero();
 
-        userRepository.save(new User(null, "John", "Doe", 28,
-                "john.doe@example.com", "Active", true, "student"));
-        userRepository.save(new User(null, "Jane", "Smith", 32,
-                "jane.smith@example.com", "Active", false, "employee"));
+        userRepository.save(new User(null, "John", "Doe",
+                "john.doe@example.com", "Active", true, "Sales", "Inside Sales"));
+        userRepository.save(new User(null, "Jane", "Smith",
+                "jane.smith@example.com", "Active", false, "Manager", "Sales"));
 
         assertThat(userRepository.count()).isEqualTo(2);
     }

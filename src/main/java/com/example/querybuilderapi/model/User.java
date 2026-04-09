@@ -27,11 +27,6 @@ public class User {
     @JsonIgnore
     private String lastName;
 
-    @Column(nullable = false)
-    @Min(value = 0, message = "Age must be positive")
-    @Max(value = 150, message = "Age must be realistic")
-    private Integer age;
-
     @Column(nullable = false, unique = true)
     @NotBlank(message = "Email is required")
     @Email(message = "Email should be valid")
@@ -44,8 +39,11 @@ public class User {
     @Column(name = "is_online")
     private Boolean isOnline;
 
-    @Column(name = "user_type")
-    private String userType;
+    @Column(name = "position")
+    private String position;
+
+    @Column(name = "department")
+    private String department;
 
     public User() {
     }
@@ -55,16 +53,17 @@ public class User {
         return ((firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "")).trim();
     }
 
-    public User(Long id, String firstName, String lastName, Integer age,
-                String email, String status, Boolean isOnline, String userType) {
+    public User(Long id, String firstName, String lastName,
+                String email, String status, Boolean isOnline,
+                String position, String department) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
-        this.age = age;
         this.email = email;
         this.status = status;
         this.isOnline = isOnline;
-        this.userType = userType;
+        this.position = position;
+        this.department = department;
     }
 
     // --- Getters & Setters ---
@@ -93,14 +92,6 @@ public class User {
         this.lastName = lastName;
     }
 
-    public Integer getAge() {
-        return age;
-    }
-
-    public void setAge(Integer age) {
-        this.age = age;
-    }
-
     public String getEmail() {
         return email;
     }
@@ -125,11 +116,19 @@ public class User {
         this.isOnline = isOnline;
     }
 
-    public String getUserType() {
-        return userType;
+    public String getPosition() {
+        return position;
     }
 
-    public void setUserType(String userType) {
-        this.userType = userType;
+    public void setPosition(String position) {
+        this.position = position;
+    }
+
+    public String getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(String department) {
+        this.department = department;
     }
 }

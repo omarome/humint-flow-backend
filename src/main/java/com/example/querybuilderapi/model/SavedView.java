@@ -26,6 +26,14 @@ public class SavedView {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String queryJson;
 
+    /**
+     * The CRM entity this saved view targets.
+     * NULL for legacy views that query the users table.
+     * Non-null for CRM segments: CONTACT, ORGANIZATION, OPPORTUNITY, ACTIVITY, TEAM_MEMBER.
+     */
+    @Column(name = "entity_type", length = 30)
+    private String entityType;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;
@@ -71,6 +79,14 @@ public class SavedView {
         this.queryJson = queryJson;
     }
 
+    public String getEntityType() {
+        return entityType;
+    }
+
+    public void setEntityType(String entityType) {
+        this.entityType = entityType;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -83,6 +99,7 @@ public class SavedView {
     public static class SavedViewBuilder {
         private String name;
         private String queryJson;
+        private String entityType;
 
         public SavedViewBuilder name(String name) {
             this.name = name;
@@ -94,10 +111,16 @@ public class SavedView {
             return this;
         }
 
+        public SavedViewBuilder entityType(String entityType) {
+            this.entityType = entityType;
+            return this;
+        }
+
         public SavedView build() {
             SavedView view = new SavedView();
             view.setName(this.name);
             view.setQueryJson(this.queryJson);
+            view.setEntityType(this.entityType);
             return view;
         }
     }

@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import java.time.Instant;
 
+
 /**
  * Authentication account entity.
  * Separate from the domain User entity — this handles login credentials.
@@ -14,8 +15,8 @@ import java.time.Instant;
 @Table(name = "auth_accounts")
 public class AuthAccount {
 
-    public enum Role { USER, ADMIN }
-    public enum OAuthProvider { LOCAL, GOOGLE, GITHUB }
+    public enum Role { USER, ADMIN, MANAGER, SALES_REP }
+    public enum OAuthProvider { LOCAL, GOOGLE, GITHUB, FIREBASE }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,7 +33,7 @@ public class AuthAccount {
 
     @Column(name = "display_name", nullable = false)
     @NotBlank(message = "Display name is required")
-    @Pattern(regexp = "^[a-zA-Z0-9 _-]+$", message = "Display name can only contain letters, numbers, spaces, underscores, and hyphens")
+    @Pattern(regexp = "^[\\p{L}0-9 _.'-]+$", message = "Display name contains invalid characters")
     private String displayName;
 
     @Enumerated(EnumType.STRING)
@@ -49,6 +50,42 @@ public class AuthAccount {
 
     @Column(name = "photo_url")
     private String photoUrl;
+
+    // ─── Firebase Integration Fields ──────────────────────────────────────
+
+    /** Firebase UID — the unique identifier from Firebase Authentication. */
+    @Column(name = "firebase_uid", unique = true, length = 128)
+    private String firebaseUid;
+
+    /** FCM registration token for push notifications to this user's device. */
+    @Column(name = "fcm_token", columnDefinition = "TEXT")
+    private String fcmToken;
+
+    /** Timestamp of last FCM token update — used to detect stale tokens. */
+    @Column(name = "fcm_token_updated_at")
+    private Instant fcmTokenUpdatedAt;
+
+    // ─── Team Member Profile Fields ───────────────────────────────────────
+
+    @Column(name = "job_title", length = 150)
+    private String jobTitle;
+
+    @Column(name = "department", length = 100)
+    private String department = "Sales";
+
+    @Column(name = "phone", length = 50)
+    private String phone;
+
+    @Column(name = "avatar_url", columnDefinition = "TEXT")
+    private String avatarUrl;
+
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
+
+    /** Self-referencing FK to manager's auth_accounts row. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "manager_id")
+    private AuthAccount manager;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -82,6 +119,15 @@ public class AuthAccount {
         this.photoUrl = photoUrl;
     }
 
+    public AuthAccount(String email, String firebaseUid, String displayName, String photoUrl) {
+        this.email = email;
+        this.firebaseUid = firebaseUid;
+        this.displayName = displayName;
+        this.photoUrl = photoUrl;
+        this.oauthProvider = OAuthProvider.FIREBASE;
+        this.role = Role.SALES_REP;
+    }
+
     // --- Getters & Setters ---
 
     public Long getId() { return id; }
@@ -107,6 +153,33 @@ public class AuthAccount {
 
     public String getPhotoUrl() { return photoUrl; }
     public void setPhotoUrl(String photoUrl) { this.photoUrl = photoUrl; }
+
+    public String getFirebaseUid() { return firebaseUid; }
+    public void setFirebaseUid(String firebaseUid) { this.firebaseUid = firebaseUid; }
+
+    public String getFcmToken() { return fcmToken; }
+    public void setFcmToken(String fcmToken) { this.fcmToken = fcmToken; }
+
+    public Instant getFcmTokenUpdatedAt() { return fcmTokenUpdatedAt; }
+    public void setFcmTokenUpdatedAt(Instant fcmTokenUpdatedAt) { this.fcmTokenUpdatedAt = fcmTokenUpdatedAt; }
+
+    public String getJobTitle() { return jobTitle; }
+    public void setJobTitle(String jobTitle) { this.jobTitle = jobTitle; }
+
+    public String getDepartment() { return department; }
+    public void setDepartment(String department) { this.department = department; }
+
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
+
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+
+    public Boolean getIsActive() { return isActive; }
+    public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+
+    public AuthAccount getManager() { return manager; }
+    public void setManager(AuthAccount manager) { this.manager = manager; }
 
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }

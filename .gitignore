@@ -20,13 +20,22 @@ dependency-reduced-pom.xml
 # Spring Boot
 *.pid
 
-# Environment files
+# Environment files — NEVER commit real credentials
 .env
 .env.local
+.env.*
+*.env
 
 # Sensitive config files
 src/main/resources/application-*.properties
 !src/main/resources/application.properties
+
+# Firebase / GCP service account keys — NEVER commit these
+serviceAccountKey.json
+service-account.json
+*.serviceAccountKey.json
+firebase-adminsdk-*.json
+gcp-key*.json
 
 # Others
 .env

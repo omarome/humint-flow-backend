@@ -36,10 +36,10 @@ class UserControllerTest {
     @Test
     @DisplayName("GET /api/users returns 200 and list of users")
     void getAllUsers_returnsOk() throws Exception {
-        User user1 = new User(1L, "John", "Doe", 28,
-                "john.doe@example.com", "Active", true, "student");
-        User user2 = new User(2L, "Jane", "Smith", 32,
-                "jane.smith@example.com", "Active", false, "employee");
+        User user1 = new User(1L, "John", "Doe",
+                "john.doe@example.com", "Active", true, "Sales", "Inside Sales");
+        User user2 = new User(2L, "Jane", "Smith",
+                "jane.smith@example.com", "Active", false, "Manager", "Sales");
 
         when(userService.getAllUsers()).thenReturn(List.of(user1, user2));
 
@@ -69,10 +69,10 @@ class UserControllerTest {
     @Test
     @DisplayName("GET /api/users?sortBy=age&sortDir=desc returns users sorted by age descending")
     void getAllUsers_sorted() throws Exception {
-        User older = new User(2L, "Jane", "Smith", 32,
-                "jane.smith@example.com", "Active", false, "employee");
-        User younger = new User(1L, "John", "Doe", 28,
-                "john.doe@example.com", "Active", true, "student");
+        User older = new User(2L, "Jane", "Smith",
+                "jane.smith@example.com", "Active", false, "Manager", "Sales");
+        User younger = new User(1L, "John", "Doe",
+                "john.doe@example.com", "Active", true, "Sales", "Inside Sales");
 
         when(userService.getAllUsers(any(org.springframework.data.domain.Sort.class)))
                 .thenReturn(List.of(older, younger));
@@ -82,9 +82,7 @@ class UserControllerTest {
                         .param("sortDir", "desc")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(2)))
-                .andExpect(jsonPath("$[0].age", is(32)))
-                .andExpect(jsonPath("$[1].age", is(28)));
+                .andExpect(jsonPath("$", hasSize(2)));
     }
 
     // --- GET /api/users/{id} ---
@@ -92,8 +90,8 @@ class UserControllerTest {
     @Test
     @DisplayName("GET /api/users/1 returns 200 and user when found")
     void getUserById_found() throws Exception {
-        User user = new User(1L, "John", "Doe", 28,
-                "john.doe@example.com", "Active", true, "student");
+        User user = new User(1L, "John", "Doe",
+                "john.doe@example.com", "Active", true, "Sales", "Inside Sales");
 
         when(userService.getUserById(1L)).thenReturn(user);
 
@@ -102,7 +100,7 @@ class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", is(1)))
                 .andExpect(jsonPath("$.fullName", is("John Doe")))
-                .andExpect(jsonPath("$.age", is(28)))
+
                 .andExpect(jsonPath("$.email", is("john.doe@example.com")))
                 .andExpect(jsonPath("$.status", is("Active")))
                 .andExpect(jsonPath("$.isOnline", is(true)));

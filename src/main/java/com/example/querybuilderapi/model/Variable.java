@@ -15,7 +15,7 @@ public class Variable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     @NotBlank(message = "Name is required")
     private String name;
 
@@ -31,6 +31,14 @@ public class Variable {
     @NotBlank(message = "Type is required")
     private String type;
 
+    /**
+     * The CRM entity this field belongs to.
+     * Possible values: CONTACT, ORGANIZATION, OPPORTUNITY, ACTIVITY, TEAM_MEMBER.
+     * NULL for legacy "users" table fields (backward-compatible).
+     */
+    @Column(name = "entity_type")
+    private String entityType;
+
     public Variable() {
     }
 
@@ -40,6 +48,15 @@ public class Variable {
         this.label = label;
         this.offset = offset;
         this.type = type;
+    }
+
+    public Variable(Long id, String name, String label, Integer offset, String type, String entityType) {
+        this.id = id;
+        this.name = name;
+        this.label = label;
+        this.offset = offset;
+        this.type = type;
+        this.entityType = entityType;
     }
 
     // --- Getters & Setters ---
@@ -82,5 +99,13 @@ public class Variable {
 
     public void setType(String type) {
         this.type = type;
+    }
+
+    public String getEntityType() {
+        return entityType;
+    }
+
+    public void setEntityType(String entityType) {
+        this.entityType = entityType;
     }
 }

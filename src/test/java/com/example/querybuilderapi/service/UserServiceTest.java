@@ -31,15 +31,15 @@ class UserServiceTest {
 
     @BeforeEach
     void setUp() {
-        sampleUser = new User(1L, "John", "Doe", 28,
-                "john.doe@example.com", "Active", true, "student");
+        sampleUser = new User(1L, "John", "Doe",
+                "john.doe@example.com", "Active", true, "Sales", "Inside Sales");
     }
 
     @Test
     @DisplayName("getAllUsers returns list of users")
     void getAllUsers_returnsUsers() {
-        User user2 = new User(2L, "Jane", "Smith", 32,
-                "jane.smith@example.com", "Active", false, "employee");
+        User user2 = new User(2L, "Jane", "Smith",
+                "jane.smith@example.com", "Active", false, "Manager", "Sales");
         when(userRepository.findAll()).thenReturn(List.of(sampleUser, user2));
 
         List<User> result = userService.getAllUsers();
@@ -63,15 +63,15 @@ class UserServiceTest {
     @DisplayName("getAllUsers(Sort) delegates to repository with sort")
     void getAllUsers_withSort() {
         Sort sort = Sort.by(Sort.Direction.DESC, "age");
-        User user2 = new User(2L, "Jane", "Smith", 32,
-                "jane.smith@example.com", "Active", false, "employee");
+        User user2 = new User(2L, "Jane", "Smith",
+                "jane.smith@example.com", "Active", false, "Manager", "Sales");
         when(userRepository.findAll(sort)).thenReturn(List.of(user2, sampleUser));
 
         List<User> result = userService.getAllUsers(sort);
 
         assertThat(result).hasSize(2);
-        assertThat(result.get(0).getAge()).isEqualTo(32);
-        assertThat(result.get(1).getAge()).isEqualTo(28);
+
+
         verify(userRepository, times(1)).findAll(sort);
     }
 
