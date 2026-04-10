@@ -27,10 +27,11 @@ public class SavedViewController {
     @PostMapping
     public ResponseEntity<?> saveView(@RequestBody Map<String, String> payload) {
         try {
-            String name = payload.get("name");
-            String queryJson = payload.get("queryJson");
-            
-            SavedView savedView = savedViewService.saveView(name, queryJson);
+            String name       = payload.get("name");
+            String queryJson  = payload.get("queryJson");
+            String entityType = payload.get("entityType");
+
+            SavedView savedView = savedViewService.saveView(name, queryJson, entityType);
             return ResponseEntity.ok(savedView);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -40,11 +41,12 @@ public class SavedViewController {
     }
 
     /**
-     * GET /api/saved-views — returns all saved views.
+     * GET /api/saved-views?entityType=ORGANIZATION — returns views for an entity type.
+     * Omit entityType param to get legacy (null) views.
      */
     @GetMapping
-    public List<SavedView> getAllSavedViews() {
-        return savedViewService.getAllSavedViews();
+    public List<SavedView> getSavedViews(@RequestParam(required = false) String entityType) {
+        return savedViewService.getViewsByEntityType(entityType);
     }
 
     /**

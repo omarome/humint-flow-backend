@@ -35,24 +35,43 @@ public class SavedViewService {
     /**
      * Saves a new view with validation.
      */
-    public SavedView saveView(String name, String queryJson) {
+    public SavedView saveView(String name, String queryJson, String entityType) {
         validateInput(name, "View name");
-        
-        // Basic check to ensure the query is not empty or missing rules
+
         if (!StringUtils.hasText(queryJson) || queryJson.contains("\"rules\":[]")) {
             throw new IllegalArgumentException("At least one filter must be selected");
         }
-        
+
         SavedView view = SavedView.builder()
                 .name(name.trim())
                 .queryJson(queryJson)
+                .entityType(StringUtils.hasText(entityType) ? entityType.trim().toUpperCase() : null)
                 .build();
-        
+
         return savedViewRepository.save(view);
     }
 
     /**
-     * Returns all saved views.
+     * Returns saved views for a specific entity type.
+     * Falls back to legacy null-entityType views when entityType is TEAM_MEMBER or null.
+     */
+    public List<SavedView> getViewsByEntityType(String entityType) {
+        if (!StringUtils.hasText(entityType)) {
+            return savedViewRepository.findByEntityTypeIsNullOrderByCreatedAtDesc();
+        }
+        String upper = entityType.trim().toUpperCase();
+        List<SavedView> typed = savedViewRepository.findByEntityTypeOrderByCreatedAtDesc(upper);
+        // Also include legacy null-type views for TEAM_MEMBER for backwards compatibility
+        if ("TEAM_MEMBER".equals(upper)) {
+            List<SavedView> legacy = savedViewRepository.findByEntityTypeIsNullOrderByCreatedAtDesc();
+            typed = new java.util.ArrayList<>(typed);
+            typed.addAll(legacy);
+        }
+        return typed;
+    }
+
+    /**
+     * Returns all saved views (kept for backwards compatibility).
      */
     public List<SavedView> getAllSavedViews() {
         return savedViewRepository.findAll();

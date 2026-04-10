@@ -30,10 +30,10 @@ class SavedViewServiceTest {
         String name = "Test View";
         String queryJson = "{\"combinator\":\"and\",\"rules\":[{\"field\":\"age\",\"operator\":\">\",\"value\":25}]}";
         SavedView expectedView = SavedView.builder().name(name).queryJson(queryJson).build();
-        
+
         when(savedViewRepository.save(any(SavedView.class))).thenReturn(expectedView);
 
-        SavedView result = savedViewService.saveView(name, queryJson);
+        SavedView result = savedViewService.saveView(name, queryJson, "TEAM_MEMBER");
 
         assertNotNull(result);
         assertEquals(name, result.getName());
@@ -42,43 +42,43 @@ class SavedViewServiceTest {
 
     @Test
     void saveView_EmptyName_ShouldThrowException() {
-        assertThrows(IllegalArgumentException.class, () -> 
-            savedViewService.saveView("", "{}")
+        assertThrows(IllegalArgumentException.class, () ->
+            savedViewService.saveView("", "{}", null)
         );
     }
 
     @Test
     void saveView_LongName_ShouldThrowException() {
         String longName = "a".repeat(101);
-        assertThrows(IllegalArgumentException.class, () -> 
-            savedViewService.saveView(longName, "{}")
+        assertThrows(IllegalArgumentException.class, () ->
+            savedViewService.saveView(longName, "{}", null)
         );
     }
 
     @Test
     void saveView_DangerousChars_ShouldThrowException() {
-        assertThrows(IllegalArgumentException.class, () -> 
-            savedViewService.saveView("My View; DROP TABLE users", "{}")
+        assertThrows(IllegalArgumentException.class, () ->
+            savedViewService.saveView("My View; DROP TABLE users", "{}", null)
         );
-        assertThrows(IllegalArgumentException.class, () -> 
-            savedViewService.saveView("My View' OR 1=1", "{}")
+        assertThrows(IllegalArgumentException.class, () ->
+            savedViewService.saveView("My View' OR 1=1", "{}", null)
         );
     }
 
     @Test
     void saveView_SqlKeywords_ShouldThrowException() {
-        assertThrows(IllegalArgumentException.class, () -> 
-            savedViewService.saveView("SELECT everything", "{\"rules\":[{\"f\":\"v\"}]}")
+        assertThrows(IllegalArgumentException.class, () ->
+            savedViewService.saveView("SELECT everything", "{\"rules\":[{\"f\":\"v\"}]}", null)
         );
     }
 
     @Test
     void saveView_EmptyRules_ShouldThrowException() {
-        assertThrows(IllegalArgumentException.class, () -> 
-            savedViewService.saveView("Empty Rules", "{\"rules\":[]}")
+        assertThrows(IllegalArgumentException.class, () ->
+            savedViewService.saveView("Empty Rules", "{\"rules\":[]}", null)
         );
-        assertThrows(IllegalArgumentException.class, () -> 
-            savedViewService.saveView("Null Query", null)
+        assertThrows(IllegalArgumentException.class, () ->
+            savedViewService.saveView("Null Query", null, null)
         );
     }
 
@@ -96,7 +96,7 @@ class SavedViewServiceTest {
         Long id = 999L;
         when(savedViewRepository.existsById(id)).thenReturn(false);
 
-        assertThrows(IllegalArgumentException.class, () -> 
+        assertThrows(IllegalArgumentException.class, () ->
             savedViewService.deleteView(id)
         );
         verify(savedViewRepository, never()).deleteById(anyLong());
