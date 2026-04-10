@@ -36,8 +36,11 @@ public class FirebaseConfig {
 
         try {
             GoogleCredentials credentials = resolveCredentials();
+            String projectId = System.getenv("GOOGLE_CLOUD_PROJECT");
+            if (projectId == null || projectId.isBlank()) projectId = "humint-flow";
             FirebaseOptions options = FirebaseOptions.builder()
                     .setCredentials(credentials)
+                    .setProjectId(projectId)
                     .build();
             FirebaseApp.initializeApp(options);
             log.info("Firebase Admin SDK initialized successfully.");
