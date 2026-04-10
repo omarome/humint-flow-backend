@@ -24,6 +24,7 @@ import com.example.querybuilderapi.service.AuthService;
 import com.example.querybuilderapi.model.AuthAccount;
 import com.example.querybuilderapi.dto.AuthResponse;
 
+import jakarta.servlet.http.Cookie;
 import java.util.Arrays;
 import java.util.List;
 
@@ -89,8 +90,8 @@ public class SecurityConfig {
                         .permitAll()
                         // Health check for Docker, Cloud Run, and Render keep-alive
                         .requestMatchers("/api/health", "/actuator/health").permitAll()
-                        // WebSocket SockJS handshake endpoints
-                        .requestMatchers("/ws/**").permitAll()
+                        // WebSocket SockJS handshake endpoints (token validated in handler)
+                        .requestMatchers("/ws/**").authenticated()
                         // All other /api/** require authentication
                         .requestMatchers("/api/**").authenticated()
                         // Everything else (static, etc.) is open
@@ -133,14 +134,24 @@ public class SecurityConfig {
             AuthResponse authResponse = authService.handleOAuthLogin(
                     email, name, AuthAccount.OAuthProvider.GOOGLE, sub, picture);
 
-            // Redirect back to frontend with tokens as URL parameters
-            // The frontend will parse these and log the user in
-            String targetUrl = String.format("%s/login-success?accessToken=%s&refreshToken=%s",
-                    frontendUrl,
-                    authResponse.getAccessToken(),
-                    authResponse.getRefreshToken());
+            // Set tokens as HttpOnly secure cookies — never exposed to JavaScript
+            boolean secure = !frontendUrl.startsWith("http://localhost");
 
-            response.sendRedirect(targetUrl);
+            Cookie accessCookie = new Cookie("accessToken", authResponse.getAccessToken());
+            accessCookie.setHttpOnly(true);
+            accessCookie.setSecure(secure);
+            accessCookie.setPath("/");
+            accessCookie.setMaxAge(900); // 15 minutes
+
+            Cookie refreshCookie = new Cookie("refreshToken", authResponse.getRefreshToken());
+            refreshCookie.setHttpOnly(true);
+            refreshCookie.setSecure(secure);
+            refreshCookie.setPath("/");
+            refreshCookie.setMaxAge(604800); // 7 days
+
+            response.addCookie(accessCookie);
+            response.addCookie(refreshCookie);
+            response.sendRedirect(frontendUrl + "/login-success");
         };
     }
 }

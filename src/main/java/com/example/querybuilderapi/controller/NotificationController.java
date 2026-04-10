@@ -13,7 +13,6 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/notifications")
-@CrossOrigin(origins = "http://localhost:3000") // Enable CORS for React frontend
 public class NotificationController {
 
     private final NotificationService notificationService;
