@@ -83,6 +83,12 @@ public class Opportunity extends BaseEntity {
     @org.hibernate.envers.Audited(targetAuditMode = org.hibernate.envers.RelationTargetAuditMode.NOT_AUDITED)
     private AuthAccount assignedTo;
 
+    /** Workspace this opportunity belongs to. Mandatory — set at creation. */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "workspace_id", nullable = false)
+    @org.hibernate.envers.Audited(targetAuditMode = org.hibernate.envers.RelationTargetAuditMode.NOT_AUDITED)
+    private Workspace workspace;
+
     public Opportunity() {}
 
     // ─── Deal Stage Enum ─────────────────────────────────────────────────
@@ -191,5 +197,13 @@ public class Opportunity extends BaseEntity {
 
     public void setPrimaryContact(Contact primaryContact) {
         this.primaryContact = primaryContact;
+    }
+
+    public Workspace getWorkspace() {
+        return workspace;
+    }
+
+    public void setWorkspace(Workspace workspace) {
+        this.workspace = workspace;
     }
 }

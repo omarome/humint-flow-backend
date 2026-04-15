@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.security.access.AccessDeniedException;
 
 /**
  * Global exception handler for REST controllers.
@@ -37,5 +38,23 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleIllegalArgumentException(IllegalArgumentException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("error", ex.getMessage()));
+    }
+
+    /**
+     * Handle invite-only enforcement (thrown when an unknown email tries to sign in).
+     */
+    @ExceptionHandler(AccountNotInvitedException.class)
+    public ResponseEntity<Map<String, String>> handleNotInvited(AccountNotInvitedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", ex.getMessage()));
+    }
+
+    /**
+     * Handle Spring Security access-denied (e.g. @PreAuthorize failures).
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, String>> handleAccessDenied(AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", "Access denied. You do not have permission to perform this action."));
     }
 }

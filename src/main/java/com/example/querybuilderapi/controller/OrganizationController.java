@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -37,6 +38,7 @@ public class OrganizationController {
      * @param search  optional name search query
      */
     @GetMapping
+    @PreAuthorize("@perms.can('ORGANIZATIONS_READ')")
     public ResponseEntity<Page<OrganizationResponse>> listOrganizations(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -58,6 +60,7 @@ public class OrganizationController {
      * Returns a single organization by UUID.
      */
     @GetMapping("/{id}")
+    @PreAuthorize("@perms.can('ORGANIZATIONS_READ')")
     public ResponseEntity<OrganizationResponse> getOrganization(@PathVariable UUID id) {
         OrganizationResponse org = organizationService.getOrganization(id);
         return ResponseEntity.ok(org);
@@ -68,6 +71,7 @@ public class OrganizationController {
      * Creates a new organization.
      */
     @PostMapping
+    @PreAuthorize("@perms.can('ORGANIZATIONS_CREATE')")
     public ResponseEntity<OrganizationResponse> createOrganization(
             @Valid @RequestBody OrganizationRequest request) {
         OrganizationResponse created = organizationService.createOrganization(request);
@@ -77,8 +81,10 @@ public class OrganizationController {
     /**
      * PUT /api/crm/organizations/{id}
      * Fully updates an existing organization.
+     * Ownership enforcement (SALES_REP → own records only) is handled in the service layer.
      */
     @PutMapping("/{id}")
+    @PreAuthorize("@perms.can(\'ORGANIZATIONS_UPDATE\')")
     public ResponseEntity<OrganizationResponse> updateOrganization(
             @PathVariable UUID id,
             @Valid @RequestBody OrganizationRequest request) {
@@ -89,8 +95,10 @@ public class OrganizationController {
     /**
      * PATCH /api/crm/organizations/{id}
      * Partially updates an organization (only non-null fields).
+     * Ownership enforcement (SALES_REP → own records only) is handled in the service layer.
      */
     @PatchMapping("/{id}")
+    @PreAuthorize("@perms.can(\'ORGANIZATIONS_UPDATE\')")
     public ResponseEntity<OrganizationResponse> patchOrganization(
             @PathVariable UUID id,
             @RequestBody OrganizationRequest request) {
@@ -100,9 +108,10 @@ public class OrganizationController {
 
     /**
      * DELETE /api/crm/organizations/{id}
-     * Soft deletes an organization.
+     * Soft deletes an organization. Restricted to ADMIN and MANAGER.
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("@perms.can('ORGANIZATIONS_DELETE')")
     public ResponseEntity<Void> deleteOrganization(@PathVariable UUID id) {
         organizationService.deleteOrganization(id);
         return ResponseEntity.noContent().build();

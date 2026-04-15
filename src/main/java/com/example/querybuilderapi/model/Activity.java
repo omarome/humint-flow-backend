@@ -73,6 +73,11 @@ public class Activity extends BaseEntity {
     @JoinColumn(name = "assigned_to_id")
     private com.example.querybuilderapi.model.AuthAccount assignedTo;
 
+    /** Workspace this activity belongs to. Nullable for legacy rows; set at creation. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "workspace_id")
+    private Workspace workspace;
+
     public Activity() {}
 
     // ─── Getters & Setters ───────────────────────────────────────────────
@@ -164,5 +169,13 @@ public class Activity extends BaseEntity {
 
     public void setTaskCompleted(Boolean taskCompleted) {
         this.taskCompleted = taskCompleted;
+    }
+
+    public Workspace getWorkspace() {
+        return workspace;
+    }
+
+    public void setWorkspace(Workspace workspace) {
+        this.workspace = workspace;
     }
 }

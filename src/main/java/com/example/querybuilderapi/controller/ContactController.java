@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -39,6 +40,7 @@ public class ContactController {
      * @param organizationId optional filter by organization
      */
     @GetMapping
+    @PreAuthorize("@perms.can('CONTACTS_READ')")
     public ResponseEntity<?> listContacts(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -69,6 +71,7 @@ public class ContactController {
      * Returns a single contact by UUID, including flattened Organization data.
      */
     @GetMapping("/{id}")
+    @PreAuthorize("@perms.can('CONTACTS_READ')")
     public ResponseEntity<ContactResponse> getContact(@PathVariable UUID id) {
         ContactResponse contact = contactService.getContact(id);
         return ResponseEntity.ok(contact);
@@ -80,6 +83,7 @@ public class ContactController {
      * the contact will be linked to that organization.
      */
     @PostMapping
+    @PreAuthorize("@perms.can('CONTACTS_CREATE')")
     public ResponseEntity<ContactResponse> createContact(
             @Valid @RequestBody ContactRequest request) {
         ContactResponse created = contactService.createContact(request);
@@ -89,8 +93,10 @@ public class ContactController {
     /**
      * PUT /api/crm/contacts/{id}
      * Fully updates an existing contact.
+     * Ownership enforcement (SALES_REP → own records only) is handled in the service layer.
      */
     @PutMapping("/{id}")
+    @PreAuthorize("@perms.can(\'CONTACTS_UPDATE\')")
     public ResponseEntity<ContactResponse> updateContact(
             @PathVariable UUID id,
             @Valid @RequestBody ContactRequest request) {
@@ -101,8 +107,10 @@ public class ContactController {
     /**
      * PATCH /api/crm/contacts/{id}
      * Partially updates a contact (only non-null fields).
+     * Ownership enforcement (SALES_REP → own records only) is handled in the service layer.
      */
     @PatchMapping("/{id}")
+    @PreAuthorize("@perms.can(\'CONTACTS_UPDATE\')")
     public ResponseEntity<ContactResponse> patchContact(
             @PathVariable UUID id,
             @RequestBody ContactRequest request) {
@@ -112,9 +120,10 @@ public class ContactController {
 
     /**
      * DELETE /api/crm/contacts/{id}
-     * Soft deletes a contact.
+     * Soft deletes a contact. Restricted to ADMIN and MANAGER.
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("@perms.can('CONTACTS_DELETE')")
     public ResponseEntity<Void> deleteContact(@PathVariable UUID id) {
         contactService.deleteContact(id);
         return ResponseEntity.noContent().build();

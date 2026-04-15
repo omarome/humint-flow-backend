@@ -59,7 +59,7 @@ public class FirebaseClaimsService {
         authAccountRepository.save(account);
 
         // Push claims to Firebase (best-effort — Firebase may be unavailable in dev)
-        pushClaimsToFirebase(account.getFirebaseUid(), newRole, teamId);
+        pushClaimsToFirebase(account.getFirebaseUid(), newRole, teamId, null);
 
         log.info("Updated role for account {} ({}) to {}", accountId, account.getEmail(), newRole);
     }
@@ -72,31 +72,44 @@ public class FirebaseClaimsService {
     public void syncClaims(Long accountId) {
         AuthAccount account = authAccountRepository.findById(accountId)
                 .orElseThrow(() -> new IllegalArgumentException("AuthAccount not found: " + accountId));
-        pushClaimsToFirebase(account.getFirebaseUid(), account.getRole(), null);
+        pushClaimsToFirebase(account.getFirebaseUid(), account.getRole(), null, null);
+    }
+
+    /**
+     * Re-syncs Firebase claims including the active workspace ID.
+     * Called after workspace creation, member role change, and workspace switch.
+     *
+     * @param accountId   The auth_accounts.id to update.
+     * @param workspaceId The workspace to set as activeWorkspaceId in claims.
+     */
+    public void syncClaimsWithWorkspace(Long accountId, Long workspaceId) {
+        AuthAccount account = authAccountRepository.findById(accountId)
+                .orElseThrow(() -> new IllegalArgumentException("AuthAccount not found: " + accountId));
+        pushClaimsToFirebase(account.getFirebaseUid(), account.getRole(), null, workspaceId);
     }
 
     // ── Private helpers ──────────────────────────────────────────────────
 
-    private void pushClaimsToFirebase(String firebaseUid, AuthAccount.Role role, Long teamId) {
+    private void pushClaimsToFirebase(String firebaseUid, AuthAccount.Role role, Long teamId, Long workspaceId) {
         if (firebaseUid == null || firebaseUid.isBlank()) {
             log.debug("Skipping Firebase claims update — no Firebase UID on account.");
             return;
         }
 
-        // Minimal claims — only role and (optionally) teamId
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", role.name());
-        if (teamId != null) claims.put("teamId", teamId);
+        if (teamId != null)      claims.put("teamId", teamId);
+        if (workspaceId != null) claims.put("activeWorkspaceId", workspaceId);
 
         try {
             if (!FirebaseApp.getApps().isEmpty()) {
                 FirebaseAuth.getInstance().setCustomUserClaims(firebaseUid, claims);
-                log.info("Firebase custom claims updated for UID {}: role={}", firebaseUid, role);
+                log.info("Firebase custom claims updated for UID {}: role={}, activeWorkspaceId={}",
+                         firebaseUid, role, workspaceId);
             } else {
                 log.warn("Firebase Admin SDK not initialized — skipping claims update for UID {}", firebaseUid);
             }
         } catch (FirebaseAuthException e) {
-            // Log but don't fail the request — PostgreSQL is the source of truth
             log.error("Failed to update Firebase custom claims for UID {}: {}", firebaseUid, e.getMessage());
         }
     }

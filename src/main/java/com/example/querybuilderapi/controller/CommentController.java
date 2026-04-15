@@ -48,7 +48,7 @@ public class CommentController {
     // ── Read ──────────────────────────────────────────────────────────────
 
     @GetMapping("/{entityType}/{entityId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("@perms.can('COMMENTS_READ')")
     public ResponseEntity<List<Map<String, Object>>> list(
             @PathVariable String entityType,
             @PathVariable UUID entityId) {
@@ -68,7 +68,7 @@ public class CommentController {
     // ── Write ─────────────────────────────────────────────────────────────
 
     @PostMapping("/{entityType}/{entityId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("@perms.can('COMMENTS_WRITE')")
     public ResponseEntity<Map<String, Object>> create(
             @PathVariable String entityType,
             @PathVariable UUID entityId,
@@ -89,7 +89,7 @@ public class CommentController {
     }
 
     @PatchMapping("/{commentId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("@perms.can('COMMENTS_WRITE')")
     public ResponseEntity<Map<String, Object>> edit(
             @PathVariable UUID commentId,
             @Valid @RequestBody CommentRequest req,
@@ -108,7 +108,7 @@ public class CommentController {
     }
 
     @DeleteMapping("/{commentId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("@perms.can('COMMENTS_WRITE')")
     public ResponseEntity<Void> delete(
             @PathVariable UUID commentId,
             Authentication auth) {

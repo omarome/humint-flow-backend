@@ -2,6 +2,7 @@ package com.example.querybuilderapi.controller;
 
 import com.example.querybuilderapi.dto.*;
 import com.example.querybuilderapi.model.AuthAccount;
+import com.example.querybuilderapi.exception.AccountNotInvitedException;
 import com.example.querybuilderapi.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -25,13 +26,19 @@ public class AuthController {
     }
 
     /**
-     * POST /api/auth/register — create a new local account.
+     * POST /api/auth/register — accept an invitation by setting a password.
+     *
+     * The email must have been pre-provisioned via {@code POST /api/admin/invite}.
+     * Unknown emails receive 403 (not invited); already-active accounts receive 400.
      */
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
         try {
             AuthResponse response = authService.register(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (AccountNotInvitedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", e.getMessage()));

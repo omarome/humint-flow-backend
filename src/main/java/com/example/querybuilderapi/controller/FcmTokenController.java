@@ -28,7 +28,7 @@ public class FcmTokenController {
     public record RegisterTokenRequest(String token) {}
 
     @PostMapping("/register")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("@perms.can('FCM_TOKEN_WRITE')")
     public ResponseEntity<Void> register(@RequestBody RegisterTokenRequest body,
                                          Authentication auth) {
         if (body.token() == null || body.token().isBlank()) {
@@ -39,7 +39,7 @@ public class FcmTokenController {
     }
 
     @DeleteMapping("/register")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("@perms.can('FCM_TOKEN_WRITE')")
     public ResponseEntity<Void> unregister(Authentication auth) {
         fcmTokenService.removeToken(auth.getName());
         return ResponseEntity.noContent().build();

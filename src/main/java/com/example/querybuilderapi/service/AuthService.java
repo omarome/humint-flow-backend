@@ -3,6 +3,7 @@ package com.example.querybuilderapi.service;
 import com.example.querybuilderapi.dto.AuthResponse;
 import com.example.querybuilderapi.dto.LoginRequest;
 import com.example.querybuilderapi.dto.RegisterRequest;
+import com.example.querybuilderapi.exception.AccountNotInvitedException;
 import com.example.querybuilderapi.model.AuthAccount;
 import com.example.querybuilderapi.model.RefreshToken;
 import com.example.querybuilderapi.repository.AuthAccountRepository;
@@ -41,23 +42,35 @@ public class AuthService {
     }
 
     /**
-     * Register a new local account.
+     * Complete account setup for a user who was pre-provisioned via the invite flow.
+     *
+     * The caller must already have a pending {@code auth_accounts} row created by
+     * {@code POST /api/admin/invite} (i.e. {@code is_active = false}, no password hash).
+     * This endpoint sets the password and activates the account so the user can log in.
+     *
+     * Callers with an email that has NOT been pre-provisioned receive
+     * {@link AccountNotInvitedException} (→ 403) — they cannot self-register.
+     *
+     * @throws AccountNotInvitedException if no pending invite exists for the email
+     * @throws IllegalArgumentException   if the email is already active (account already set up)
      */
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (authAccountRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Email already registered");
+        AuthAccount account = authAccountRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new AccountNotInvitedException(request.getEmail()));
+
+        // Guard: account already active means the invite was previously accepted.
+        if (Boolean.TRUE.equals(account.getIsActive())) {
+            throw new IllegalArgumentException(
+                    "An active account already exists for '" + request.getEmail() + "'. "
+                    + "Use the login endpoint instead.");
         }
 
-        AuthAccount account = new AuthAccount(
-                request.getEmail(),
-                passwordEncoder.encode(request.getPassword()),
-                request.getDisplayName(),
-                AuthAccount.Role.USER,
-                AuthAccount.OAuthProvider.LOCAL,
-                null,
-                null
-        );
+        // Accept the invite: set password and activate the account.
+        account.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        account.setDisplayName(request.getDisplayName());
+        account.setOauthProvider(AuthAccount.OAuthProvider.LOCAL);
+        account.setIsActive(true);
         account = authAccountRepository.save(account);
 
         return buildAuthResponse(account);
@@ -111,37 +124,34 @@ public class AuthService {
     }
 
     /**
-     * Find or create an account from an OAuth2 login.
+     * Handles an OAuth2 (Google) login via Spring Security's OAuth2 client.
+     *
+     * Invite-only enforcement: if no pre-provisioned account exists for the
+     * email, an {@link AccountNotInvitedException} is thrown (→ 403).
+     * Auto-creating accounts for new OAuth users is intentionally disabled.
      */
     @Transactional
     public AuthResponse handleOAuthLogin(String email, String displayName,
                                           AuthAccount.OAuthProvider provider, String oauthId, String photoUrl) {
         AuthAccount account = authAccountRepository
+                // Fast path: already linked by provider + oauthId
                 .findByOauthProviderAndOauthId(provider, oauthId)
                 .map(existing -> {
-                    // Update photoUrl even for existing OAuth accounts if it's provided
-                    if (photoUrl != null) {
-                        existing.setPhotoUrl(photoUrl);
-                    }
+                    if (photoUrl != null) existing.setPhotoUrl(photoUrl);
                     return authAccountRepository.save(existing);
                 })
                 .orElseGet(() -> {
-                    // Check if a local account with this email exists — link it
-                    AuthAccount existing = authAccountRepository.findByEmail(email).orElse(null);
-                    if (existing != null) {
-                        existing.setOauthProvider(provider);
-                        existing.setOauthId(oauthId);
-                        if (photoUrl != null) {
-                            existing.setPhotoUrl(photoUrl);
-                        }
-                        return authAccountRepository.save(existing);
+                    // Link to a pre-provisioned (invited) account by email
+                    AuthAccount invited = authAccountRepository.findByEmail(email)
+                            .orElseThrow(() -> new AccountNotInvitedException(email));
+
+                    invited.setOauthProvider(provider);
+                    invited.setOauthId(oauthId);
+                    invited.setIsActive(true);      // activate pending invite
+                    if (photoUrl != null && invited.getPhotoUrl() == null) {
+                        invited.setPhotoUrl(photoUrl);
                     }
-                    // Create a brand-new OAuth account
-                    AuthAccount newAccount = new AuthAccount(
-                            email, null, displayName,
-                            AuthAccount.Role.USER, provider, oauthId, photoUrl
-                    );
-                    return authAccountRepository.save(newAccount);
+                    return authAccountRepository.save(invited);
                 });
 
         return buildAuthResponse(account);

@@ -15,7 +15,7 @@ import java.time.Instant;
 @Table(name = "auth_accounts")
 public class AuthAccount {
 
-    public enum Role { USER, ADMIN, MANAGER, SALES_REP }
+    public enum Role { USER, SUPER_ADMIN, ADMIN, MANAGER, SALES_REP, VIEWER, GUEST, WORKSPACE_OWNER }
     public enum OAuthProvider { LOCAL, GOOGLE, GITHUB, FIREBASE }
 
     @Id

@@ -29,7 +29,7 @@ public class PushNotificationController {
     public record PushRequest(String title, String body, Map<String, String> data) {}
 
     @PostMapping("/user/{accountId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("@perms.can('PUSH_SEND')")
     public ResponseEntity<Void> pushToUser(@PathVariable Long accountId,
                                            @RequestBody PushRequest req) {
         pushService.sendToUser(accountId, req.title(), req.body(), req.data());
@@ -37,7 +37,7 @@ public class PushNotificationController {
     }
 
     @PostMapping("/role/{role}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("@perms.can('PUSH_SEND')")
     public ResponseEntity<Void> pushToRole(@PathVariable String role,
                                            @RequestBody PushRequest req) {
         pushService.sendToRole(role, req.title(), req.body(), req.data());
@@ -45,7 +45,7 @@ public class PushNotificationController {
     }
 
     @PostMapping("/broadcast")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@perms.can('NOTIFICATIONS_MANAGE')")
     public ResponseEntity<Void> broadcast(@RequestBody PushRequest req) {
         pushService.broadcast(req.title(), req.body(), req.data());
         return ResponseEntity.accepted().build();

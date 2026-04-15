@@ -21,12 +21,13 @@ public class AutomationRuleController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SALES_REP', 'USER')")
+    @PreAuthorize("@perms.can('AUTOMATIONS_READ')")
     public ResponseEntity<List<AutomationRule>> getAllRules() {
         return ResponseEntity.ok(automationRuleService.getAllRules());
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@perms.can('AUTOMATIONS_READ')")
     public ResponseEntity<AutomationRule> getRuleById(@PathVariable UUID id) {
         return automationRuleService.getRuleById(id)
                 .map(ResponseEntity::ok)
@@ -34,13 +35,13 @@ public class AutomationRuleController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("@perms.can('AUTOMATIONS_WRITE')")
     public ResponseEntity<AutomationRule> createRule(@Valid @RequestBody AutomationRule rule) {
         return ResponseEntity.ok(automationRuleService.createRule(rule));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("@perms.can('AUTOMATIONS_WRITE')")
     public ResponseEntity<AutomationRule> updateRule(@PathVariable UUID id, @Valid @RequestBody AutomationRule rule) {
         try {
             return ResponseEntity.ok(automationRuleService.updateRule(id, rule));
@@ -50,7 +51,7 @@ public class AutomationRuleController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("@perms.can('AUTOMATIONS_WRITE')")
     public ResponseEntity<Void> deleteRule(@PathVariable UUID id) {
         automationRuleService.deleteRule(id);
         return ResponseEntity.noContent().build();

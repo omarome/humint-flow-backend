@@ -35,21 +35,21 @@ public class TeamMemberController {
 
     /** Lists all active team members with deal + activity counts. */
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SALES_REP', 'USER')")
+    @PreAuthorize("@perms.can('TEAM_READ')")
     public ResponseEntity<List<TeamMemberResponse>> listActiveMembers() {
         return ResponseEntity.ok(teamMemberService.listActiveMembers());
     }
 
     /** Lists all team members including inactive (admin-only view). */
     @GetMapping("/all")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@perms.can('TEAM_READ_ALL')")
     public ResponseEntity<List<TeamMemberResponse>> listAllMembers() {
         return ResponseEntity.ok(teamMemberService.listAllMembers());
     }
 
     /** Gets the full profile of a single team member. */
     @GetMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("@perms.can('TEAM_READ')")
     public ResponseEntity<TeamMemberResponse> getMember(@PathVariable Long id) {
         return ResponseEntity.ok(teamMemberService.getMember(id));
     }
@@ -59,7 +59,7 @@ public class TeamMemberController {
      * Role changes are restricted to ADMIN.
      */
     @PatchMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("@perms.can('TEAM_EDIT')")
     public ResponseEntity<TeamMemberResponse> updateMember(
             @PathVariable Long id,
             @RequestBody TeamMemberUpdateRequest request) {
@@ -74,7 +74,7 @@ public class TeamMemberController {
      * Admin-only endpoint.
      */
     @PatchMapping("/{id}/role")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@perms.can('TEAM_ROLE_ASSIGN')")
     public ResponseEntity<TeamMemberResponse> updateRole(
             @PathVariable Long id,
             @RequestBody RoleUpdateRequest request) {

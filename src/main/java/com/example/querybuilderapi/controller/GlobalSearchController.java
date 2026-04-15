@@ -48,7 +48,7 @@ public class GlobalSearchController {
     }
 
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("@perms.can('GLOBAL_SEARCH')")
     public ResponseEntity<Map<String, List<?>>> search(
             @RequestParam String q,
             @RequestParam(defaultValue = "5") int limit) {

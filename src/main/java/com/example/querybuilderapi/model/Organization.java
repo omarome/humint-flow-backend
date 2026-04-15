@@ -58,6 +58,12 @@ public class Organization extends BaseEntity {
     @org.hibernate.envers.Audited(targetAuditMode = org.hibernate.envers.RelationTargetAuditMode.NOT_AUDITED)
     private User assignedTo;
 
+    /** Workspace this organization belongs to. Mandatory — set at creation. */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "workspace_id", nullable = false)
+    @org.hibernate.envers.Audited(targetAuditMode = org.hibernate.envers.RelationTargetAuditMode.NOT_AUDITED)
+    private Workspace workspace;
+
     public Organization() {}
 
     // ─── Getters & Setters ───────────────────────────────────────────────
@@ -140,5 +146,13 @@ public class Organization extends BaseEntity {
 
     public void setAnnualRevenue(java.math.BigDecimal annualRevenue) {
         this.annualRevenue = annualRevenue;
+    }
+
+    public Workspace getWorkspace() {
+        return workspace;
+    }
+
+    public void setWorkspace(Workspace workspace) {
+        this.workspace = workspace;
     }
 }

@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -36,6 +37,7 @@ public class ActivityController {
      * returns the timeline for that specific entity.
      */
     @GetMapping
+    @PreAuthorize("@perms.can('ACTIVITIES_READ')")
     public ResponseEntity<Page<ActivityResponse>> getActivities(
             @RequestParam(value = "entityType", required = false) EntityType entityType,
             @RequestParam(value = "entityId", required = false) UUID entityId,
@@ -53,6 +55,7 @@ public class ActivityController {
      * Creates a new activity.
      */
     @PostMapping
+    @PreAuthorize("@perms.can('ACTIVITIES_CREATE')")
     public ResponseEntity<ActivityResponse> createActivity(
             @Valid @RequestBody ActivityRequest request) {
         ActivityResponse created = activityService.createActivity(request);
@@ -62,8 +65,10 @@ public class ActivityController {
     /**
      * PATCH /api/sales/activities/{id}
      * Partially updates an existing activity.
+     * Ownership enforcement (SALES_REP → own activities only) is handled in the service layer.
      */
     @PatchMapping("/{id}")
+    @PreAuthorize("@perms.can(\'ACTIVITIES_UPDATE\')")
     public ResponseEntity<ActivityResponse> updateActivity(
             @PathVariable UUID id,
             @RequestBody ActivityRequest request) {
@@ -73,9 +78,10 @@ public class ActivityController {
 
     /**
      * DELETE /api/sales/activities/{id}
-     * Soft deletes an activity.
+     * Soft deletes an activity. Restricted to ADMIN and MANAGER.
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("@perms.can('ACTIVITIES_DELETE')")
     public ResponseEntity<Void> deleteActivity(@PathVariable UUID id) {
         activityService.deleteActivity(id);
         return ResponseEntity.noContent().build();

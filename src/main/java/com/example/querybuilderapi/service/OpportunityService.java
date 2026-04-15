@@ -11,6 +11,9 @@ import com.example.querybuilderapi.repository.AuthAccountRepository;
 import com.example.querybuilderapi.repository.ContactRepository;
 import com.example.querybuilderapi.repository.OpportunityRepository;
 import com.example.querybuilderapi.repository.OrganizationRepository;
+import com.example.querybuilderapi.model.RecordShare;
+import com.example.querybuilderapi.model.EntityType;
+import com.example.querybuilderapi.repository.RecordShareRepository;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -40,6 +43,7 @@ public class OpportunityService {
     private final ApplicationEventPublisher eventPublisher;
     private final FirestoreSyncService firestoreSyncService;
     private final CrmEventPublisher crmEventPublisher;
+    private final RecordShareRepository recordShareRepository;
 
     public OpportunityService(OpportunityRepository opportunityRepository,
                               OrganizationRepository organizationRepository,
@@ -48,7 +52,8 @@ public class OpportunityService {
                               AuditAwareService auditAwareService,
                               ApplicationEventPublisher eventPublisher,
                               FirestoreSyncService firestoreSyncService,
-                              CrmEventPublisher crmEventPublisher) {
+                              CrmEventPublisher crmEventPublisher,
+                              RecordShareRepository recordShareRepository) {
         this.opportunityRepository = opportunityRepository;
         this.organizationRepository = organizationRepository;
         this.contactRepository = contactRepository;
@@ -57,6 +62,7 @@ public class OpportunityService {
         this.eventPublisher = eventPublisher;
         this.firestoreSyncService = firestoreSyncService;
         this.crmEventPublisher = crmEventPublisher;
+        this.recordShareRepository = recordShareRepository;
     }
 
     /**
@@ -230,6 +236,43 @@ public class OpportunityService {
         Pageable pageable = PageRequest.of(page, size, Sort.by("name").ascending());
         return opportunityRepository.searchByName(query, pageable)
                 .map(OpportunityResponse::fromEntity);
+    }
+
+    /**
+     * Shares an opportunity with a user (GUEST or otherwise).
+     */
+    @Transactional
+    public void shareOpportunity(UUID opportunityId, Long accountId, String permission) {
+        Opportunity opp = opportunityRepository.findByIdAndIsDeletedFalse(opportunityId)
+                .orElseThrow(() -> new IllegalArgumentException("Opportunity not found: " + opportunityId));
+        AuthAccount user = authAccountRepository.findById(accountId)
+                .orElseThrow(() -> new IllegalArgumentException("Account not found: " + accountId));
+                
+        // Ensure no duplicate shares
+        recordShareRepository.findByWorkspaceIdAndResourceTypeAndResourceIdAndSharedWithId(
+            opp.getWorkspace().getId(), EntityType.OPPORTUNITY, opp.getId(), accountId)
+            .ifPresent(share -> { throw new IllegalStateException("Already shared"); });
+
+        RecordShare share = new RecordShare(opp.getWorkspace(), EntityType.OPPORTUNITY, opp.getId(), user, permission);
+        recordShareRepository.save(share);
+        
+        // Push update to Firestore so proper UID gets into the sharedWith array
+        firestoreSyncService.syncOpportunity(opp);
+    }
+
+    /**
+     * Un-shares an opportunity with a user.
+     */
+    @Transactional
+    public void unshareOpportunity(UUID opportunityId, Long accountId) {
+        Opportunity opp = opportunityRepository.findByIdAndIsDeletedFalse(opportunityId)
+                .orElseThrow(() -> new IllegalArgumentException("Opportunity not found: " + opportunityId));
+        
+        recordShareRepository.deleteByWorkspaceIdAndResourceTypeAndResourceIdAndSharedWithId(
+            opp.getWorkspace().getId(), EntityType.OPPORTUNITY, opp.getId(), accountId);
+            
+        // Push update to Firestore
+        firestoreSyncService.syncOpportunity(opp);
     }
 
     // ─── Private Helpers ─────────────────────────────────────────────────

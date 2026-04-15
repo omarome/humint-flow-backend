@@ -4,6 +4,7 @@ import com.example.querybuilderapi.repository.AuthAccountRepository;
 import com.example.querybuilderapi.security.FirebaseTokenFilter;
 import com.example.querybuilderapi.security.JwtAuthenticationFilter;
 import com.example.querybuilderapi.security.JwtService;
+import com.example.querybuilderapi.security.WorkspaceResolutionFilter;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -63,7 +64,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "X-Workspace-Id"));
         configuration.setAllowCredentials(true);
         configuration.setExposedHeaders(List.of("Authorization"));
 
@@ -75,7 +76,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
             JwtAuthenticationFilter jwtAuthFilter,
-            FirebaseTokenFilter firebaseTokenFilter) throws Exception {
+            FirebaseTokenFilter firebaseTokenFilter,
+            WorkspaceResolutionFilter workspaceResolutionFilter) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -107,6 +109,8 @@ public class SecurityConfig {
                 .addFilterBefore(firebaseTokenFilter, UsernamePasswordAuthenticationFilter.class)
                 // Then legacy JWT filter (no-op if SecurityContext already populated)
                 .addFilterBefore(jwtAuthFilter, FirebaseTokenFilter.class)
+                // Workspace resolution runs after auth filters — requires populated SecurityContext
+                .addFilterAfter(workspaceResolutionFilter, FirebaseTokenFilter.class)
 
                 // Security headers
                 .headers(headers -> headers

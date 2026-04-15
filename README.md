@@ -1,6 +1,21 @@
 # HumintFlow — Backend API
 
-Spring Boot 3 REST API for the HumintFlow CRM workspace.
+HumintFlow is a full-stack, production-ready Customer Relationship Management (CRM) workspace designed to streamline sales operations and team collaboration. It centralizes customer data, deal tracking, and team activity into a single, cohesive platform.
+
+## Product Overview
+Built with a modern tech stack (React, Spring Boot, PostgreSQL, and Firebase), HumintFlow provides:
+- **Unified Sales Workspace** — Manage Organizations, Contacts, and Pipelines in one place.
+- **Advanced Segmentation** — Powerful nested filtering (AND/OR logic) via React Query Builder.
+- **No-Code Automation** — Trigger-based workflows to handle repetitive tasks automatically.
+- **Real-Time Insights** — Dynamic dashboards and push notifications (FCM) to keep the team aligned.
+
+## Target Audience
+- **Sales Teams** — For managing daily outreach and visualizing sales pipeline progression.
+- **Sales Managers** — For monitoring performance via KPI cards and managing deal ownership.
+- **Growth & Ops Teams** — For building advanced customer segments and automating cross-entity workflows.
+- **SMBs** — For a modern, scalable, and responsive CRM solution that grows with their business.
+
+---
 
 ## Tech Stack
 

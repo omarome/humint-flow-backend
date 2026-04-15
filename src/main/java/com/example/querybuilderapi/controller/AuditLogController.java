@@ -37,7 +37,7 @@ public class AuditLogController {
     }
 
     @GetMapping("/{entityType}/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("@perms.can('AUDIT_READ')")
     public ResponseEntity<List<Map<String, Object>>> getHistory(
             @PathVariable String entityType,
             @PathVariable UUID id) {
@@ -89,7 +89,7 @@ public class AuditLogController {
      * Useful for building a compact timeline before fetching full snapshots.
      */
     @GetMapping("/{entityType}/{id}/summary")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SALES_REP', 'USER')")
+    @PreAuthorize("@perms.can('AUDIT_READ')")
     public ResponseEntity<List<Map<String, Object>>> getRevisionSummary(
             @PathVariable String entityType,
             @PathVariable UUID id) {

@@ -82,6 +82,12 @@ public class Contact extends BaseEntity {
     @org.hibernate.envers.Audited(targetAuditMode = org.hibernate.envers.RelationTargetAuditMode.NOT_AUDITED)
     private User assignedTo;
 
+    /** Workspace this contact belongs to. Mandatory — set at creation. */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "workspace_id", nullable = false)
+    @org.hibernate.envers.Audited(targetAuditMode = org.hibernate.envers.RelationTargetAuditMode.NOT_AUDITED)
+    private Workspace workspace;
+
     public Contact() {}
 
     // ─── Lifecycle Stage Enum ────────────────────────────────────────────
@@ -195,5 +201,13 @@ public class Contact extends BaseEntity {
 
     public void setOrganization(Organization organization) {
         this.organization = organization;
+    }
+
+    public Workspace getWorkspace() {
+        return workspace;
+    }
+
+    public void setWorkspace(Workspace workspace) {
+        this.workspace = workspace;
     }
 }

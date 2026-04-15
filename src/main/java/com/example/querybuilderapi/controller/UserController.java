@@ -4,6 +4,7 @@ import com.example.querybuilderapi.model.User;
 import com.example.querybuilderapi.service.UserService;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,6 +30,7 @@ public class UserController {
      * @param sortDir "asc" or "desc" (default "asc")
      */
     @GetMapping
+    @PreAuthorize("@perms.can('USERS_READ')")
     public List<User> getAllUsers(
             @RequestParam(required = false) String sortBy,
             @RequestParam(required = false, defaultValue = "asc") String sortDir) {
@@ -50,6 +52,7 @@ public class UserController {
      * GET /api/users/{id} — returns a single user by id.
      */
     @GetMapping("/{id}")
+    @PreAuthorize("@perms.can('USERS_READ')")
     public ResponseEntity<User> getUserById(@PathVariable Long id) {
         User user = userService.getUserById(id);
         if (user == null) {

@@ -1,5 +1,6 @@
 package com.example.querybuilderapi.service;
 
+import com.example.querybuilderapi.exception.AccountNotInvitedException;
 import com.example.querybuilderapi.model.AuthAccount;
 import com.example.querybuilderapi.repository.AuthAccountRepository;
 import com.google.firebase.auth.FirebaseToken;
@@ -9,15 +10,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Syncs Firebase users into the local auth_accounts table.
+ * Syncs Firebase users into the local {@code auth_accounts} table.
  *
- * On every verified Firebase request:
- *  - If the firebase_uid already exists → return the existing account.
- *  - If the email exists (legacy JWT account) → link it by setting firebase_uid.
- *  - Otherwise → create a new SALES_REP auth_account tied to the Firebase UID.
- *
- * This approach means legacy JWT/OAuth2 users are automatically upgraded when
- * they first sign in via Firebase, without losing any of their existing CRM data.
+ * On every verified Firebase request the lookup order is:
+ *   1. {@code firebase_uid} already linked  → return the existing account (fast path).
+ *   2. Email matches a pre-provisioned (invited) account  → link the UID, activate the
+ *      account, and return it.  This is how an invited user gets their first session.
+ *   3. No match at all  → throw {@link AccountNotInvitedException}.
+ *      Auto-creating SALES_REP accounts on first sign-in is intentionally disabled.
+ *      An ADMIN must call {@code POST /api/admin/invite} first.
  */
 @Service
 public class FirebaseUserSyncService {
@@ -25,53 +26,59 @@ public class FirebaseUserSyncService {
     private static final Logger log = LoggerFactory.getLogger(FirebaseUserSyncService.class);
 
     private final AuthAccountRepository authAccountRepository;
+    private final FirebaseClaimsService firebaseClaimsService;
 
-    public FirebaseUserSyncService(AuthAccountRepository authAccountRepository) {
+    public FirebaseUserSyncService(AuthAccountRepository authAccountRepository,
+                                   FirebaseClaimsService firebaseClaimsService) {
         this.authAccountRepository = authAccountRepository;
+        this.firebaseClaimsService  = firebaseClaimsService;
     }
 
     /**
-     * Finds or creates an AuthAccount for the given verified Firebase token.
+     * Resolves the {@link AuthAccount} for the given verified Firebase ID token.
      *
      * @param token the verified Firebase ID token (never null)
-     * @return the existing or newly created AuthAccount
+     * @return the linked or newly activated AuthAccount
+     * @throws AccountNotInvitedException if no pre-provisioned account exists for the email
      */
     @Transactional
     public AuthAccount syncUser(FirebaseToken token) {
         String firebaseUid = token.getUid();
         String email       = token.getEmail();
-        String name        = token.getName() != null ? token.getName() : email;
         String photoUrl    = token.getPicture();
 
-        // 1. Already linked?
+        // Fast path — already linked by UID
         return authAccountRepository.findByFirebaseUid(firebaseUid)
-                .orElseGet(() -> linkOrCreateAccount(firebaseUid, email, name, photoUrl));
+                .orElseGet(() -> linkInvitedAccount(firebaseUid, email, photoUrl));
     }
 
-    // ─── Private Helpers ─────────────────────────────────────────────────
+    // ─── Private helpers ─────────────────────────────────────────────────
 
-    private AuthAccount linkOrCreateAccount(String firebaseUid, String email,
-                                             String name, String photoUrl) {
-        // 2. Legacy account with same email? Link it.
-        return authAccountRepository.findByEmail(email)
-                .map(existing -> linkFirebaseUid(existing, firebaseUid, photoUrl))
-                .orElseGet(() -> createFirebaseAccount(firebaseUid, email, name, photoUrl));
-    }
+    /**
+     * Finds a pre-provisioned account by email and links it to the Firebase UID.
+     * Throws {@link AccountNotInvitedException} if no matching invited account exists —
+     * we no longer auto-create accounts on first sign-in.
+     */
+    private AuthAccount linkInvitedAccount(String firebaseUid, String email, String photoUrl) {
+        AuthAccount account = authAccountRepository.findByEmail(email)
+                .orElseThrow(() -> {
+                    log.warn("Firebase sign-in blocked for '{}' — no invited account found.", email);
+                    return new AccountNotInvitedException(email);
+                });
 
-    private AuthAccount linkFirebaseUid(AuthAccount account, String firebaseUid, String photoUrl) {
-        log.info("Linking existing account {} to Firebase UID {}", account.getEmail(), firebaseUid);
+        log.info("Linking invited account '{}' to Firebase UID {}", email, firebaseUid);
+
         account.setFirebaseUid(firebaseUid);
         account.setOauthProvider(AuthAccount.OAuthProvider.FIREBASE);
+        account.setIsActive(true);          // activate the pending invite
         if (photoUrl != null && account.getPhotoUrl() == null) {
             account.setPhotoUrl(photoUrl);
         }
-        return authAccountRepository.save(account);
-    }
+        account = authAccountRepository.save(account);
 
-    private AuthAccount createFirebaseAccount(String firebaseUid, String email,
-                                               String name, String photoUrl) {
-        log.info("Creating new AuthAccount for Firebase UID {} ({})", firebaseUid, email);
-        AuthAccount account = new AuthAccount(email, firebaseUid, name, photoUrl);
-        return authAccountRepository.save(account);
+        // Push the role into Firebase custom claims now that we have the UID
+        firebaseClaimsService.syncClaims(account.getId());
+
+        return account;
     }
 }

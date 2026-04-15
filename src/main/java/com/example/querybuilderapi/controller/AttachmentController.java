@@ -56,7 +56,7 @@ public class AttachmentController {
     // ── List ──────────────────────────────────────────────────────────────
 
     @GetMapping("/{entityType}/{entityId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("@perms.can('ATTACHMENTS_READ')")
     public ResponseEntity<List<Map<String, Object>>> list(
             @PathVariable String entityType,
             @PathVariable UUID entityId) {
@@ -72,7 +72,7 @@ public class AttachmentController {
     // ── Upload ────────────────────────────────────────────────────────────
 
     @PostMapping("/{entityType}/{entityId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("@perms.can('ATTACHMENTS_WRITE')")
     public ResponseEntity<Map<String, Object>> upload(
             @PathVariable String entityType,
             @PathVariable UUID entityId,
@@ -128,7 +128,7 @@ public class AttachmentController {
     // ── Delete ────────────────────────────────────────────────────────────
 
     @DeleteMapping("/{attachmentId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("@perms.can('ATTACHMENTS_WRITE')")
     public ResponseEntity<Void> delete(
             @PathVariable UUID attachmentId,
             Authentication auth) {

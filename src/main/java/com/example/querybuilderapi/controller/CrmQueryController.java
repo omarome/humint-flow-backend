@@ -6,6 +6,7 @@ import com.example.querybuilderapi.repository.VariableRepository;
 import com.example.querybuilderapi.service.CrmQueryService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -46,6 +47,7 @@ public class CrmQueryController {
      * }
      */
     @PostMapping
+    @PreAuthorize("@perms.can('SEGMENTS_READ')")
     public ResponseEntity<Map<String, Object>> query(@Valid @RequestBody CrmQueryRequest req) {
         Map<String, Object> result = crmQueryService.query(req);
         return ResponseEntity.ok(result);
@@ -56,6 +58,7 @@ public class CrmQueryController {
      * Used by the frontend to build the entity type selector + field picker.
      */
     @GetMapping("/fields")
+    @PreAuthorize("@perms.can('SEGMENTS_READ')")
     public ResponseEntity<Map<String, List<Variable>>> getAllFields() {
         Map<String, List<Variable>> fields = Map.of(
                 "CONTACT",      variableRepository.findByEntityTypeOrderByOffsetAsc("CONTACT"),
@@ -72,6 +75,7 @@ public class CrmQueryController {
      * Used by the frontend field picker when the user changes the entity type.
      */
     @GetMapping("/fields/{entityType}")
+    @PreAuthorize("@perms.can('SEGMENTS_READ')")
     public ResponseEntity<List<Variable>> getFieldsForEntity(@PathVariable String entityType) {
         List<Variable> fields = variableRepository.findByEntityTypeOrderByOffsetAsc(entityType.toUpperCase());
         if (fields.isEmpty()) {
