@@ -19,4 +19,8 @@ public interface CommentRepository extends JpaRepository<Comment, UUID> {
 
     /** Count all non-deleted comments for an entity (used for badges). */
     long countByEntityTypeAndEntityIdAndIsDeletedFalse(String entityType, UUID entityId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("UPDATE Comment c SET c.author = null WHERE c.author.id = :accountId")
+    void nullAuthorByAccountId(@org.springframework.data.repository.query.Param("accountId") Long accountId);
 }

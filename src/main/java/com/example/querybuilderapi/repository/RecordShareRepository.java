@@ -24,4 +24,6 @@ public interface RecordShareRepository extends JpaRepository<RecordShare, Long> 
 
     void deleteByWorkspaceIdAndResourceTypeAndResourceIdAndSharedWithId(
             Long workspaceId, EntityType resourceType, UUID resourceId, Long sharedWithAccountId);
+
+    void deleteBySharedWithId(Long accountId);
 }

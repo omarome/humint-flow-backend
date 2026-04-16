@@ -125,6 +125,12 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- Email (invitation emails) — active only when spring.mail.host is set -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
         <!-- Cloud SQL Connector — Unix socket connection from Cloud Run to Cloud SQL -->
         <dependency>
             <groupId>com.google.cloud</groupId>

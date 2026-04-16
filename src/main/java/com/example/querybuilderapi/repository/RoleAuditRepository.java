@@ -4,6 +4,7 @@ import com.example.querybuilderapi.model.RoleAudit;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -18,4 +19,10 @@ public interface RoleAuditRepository extends JpaRepository<RoleAudit, Long> {
            "JOIN FETCH ra.targetAccount target " +
            "WHERE ra.workspace.id = :workspaceId")
     Page<RoleAudit> findByWorkspaceIdWithAccounts(@Param("workspaceId") Long workspaceId, Pageable pageable);
+
+    void deleteByTargetAccountId(Long accountId);
+
+    @Modifying
+    @Query("UPDATE RoleAudit r SET r.actor = null WHERE r.actor.id = :accountId")
+    void nullActorByAccountId(@Param("accountId") Long accountId);
 }

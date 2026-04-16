@@ -43,6 +43,10 @@ public interface ActivityRepository extends JpaRepository<Activity, UUID>, JpaSp
      */
     java.util.List<Activity> findAllByIsDeletedFalse();
 
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("UPDATE Activity a SET a.assignedTo = null WHERE a.assignedTo.id = :accountId")
+    void nullAssignedToByAccountId(@org.springframework.data.repository.query.Param("accountId") Long accountId);
+
     /**
      * Paginated version — used by CalendarView and any global activity feed.
      */

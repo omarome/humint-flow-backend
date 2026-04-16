@@ -36,6 +36,9 @@ public interface WorkspaceMembershipRepository extends JpaRepository<WorkspaceMe
     /** Check membership existence (fast path, no entity load). */
     boolean existsByWorkspaceIdAndAccountId(Long workspaceId, Long accountId);
 
+    /** Delete all workspace memberships for a given account (used before account deletion). */
+    void deleteByAccountId(Long accountId);
+
     /**
      * Count WORKSPACE_OWNER members in a workspace.
      * Used to guard against removing the last owner.

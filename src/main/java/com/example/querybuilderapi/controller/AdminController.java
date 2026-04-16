@@ -4,8 +4,24 @@ import com.example.querybuilderapi.dto.InviteRequest;
 import com.example.querybuilderapi.dto.TeamMemberResponse;
 import com.example.querybuilderapi.model.AuthAccount;
 import com.example.querybuilderapi.repository.AuthAccountRepository;
+import com.example.querybuilderapi.repository.ActivityRepository;
+import com.example.querybuilderapi.repository.AttachmentRepository;
+import com.example.querybuilderapi.repository.CommentRepository;
+import com.example.querybuilderapi.repository.OpportunityRepository;
+import com.example.querybuilderapi.repository.RecordShareRepository;
+import com.example.querybuilderapi.repository.RefreshTokenRepository;
+import com.example.querybuilderapi.repository.RoleAuditRepository;
+import com.example.querybuilderapi.repository.WorkspaceMembershipRepository;
+import com.example.querybuilderapi.repository.WorkspaceRepository;
+import com.example.querybuilderapi.service.EmailService;
 import com.example.querybuilderapi.service.TeamMemberService;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.auth.UserRecord;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,13 +44,45 @@ import java.util.Map;
 @RequestMapping("/api/admin")
 public class AdminController {
 
-    private final AuthAccountRepository authAccountRepository;
-    private final TeamMemberService     teamMemberService;
+    private static final Logger log = LoggerFactory.getLogger(AdminController.class);
+
+    private final AuthAccountRepository        authAccountRepository;
+    private final WorkspaceMembershipRepository membershipRepository;
+    private final RefreshTokenRepository       refreshTokenRepository;
+    private final RecordShareRepository        recordShareRepository;
+    private final RoleAuditRepository          roleAuditRepository;
+    private final OpportunityRepository        opportunityRepository;
+    private final ActivityRepository           activityRepository;
+    private final CommentRepository            commentRepository;
+    private final AttachmentRepository         attachmentRepository;
+    private final WorkspaceRepository          workspaceRepository;
+    private final TeamMemberService            teamMemberService;
+    private final EmailService                 emailService;
 
     public AdminController(AuthAccountRepository authAccountRepository,
-                           TeamMemberService teamMemberService) {
+                           WorkspaceMembershipRepository membershipRepository,
+                           RefreshTokenRepository refreshTokenRepository,
+                           RecordShareRepository recordShareRepository,
+                           RoleAuditRepository roleAuditRepository,
+                           OpportunityRepository opportunityRepository,
+                           ActivityRepository activityRepository,
+                           CommentRepository commentRepository,
+                           AttachmentRepository attachmentRepository,
+                           WorkspaceRepository workspaceRepository,
+                           TeamMemberService teamMemberService,
+                           EmailService emailService) {
         this.authAccountRepository = authAccountRepository;
-        this.teamMemberService     = teamMemberService;
+        this.membershipRepository  = membershipRepository;
+        this.refreshTokenRepository  = refreshTokenRepository;
+        this.recordShareRepository   = recordShareRepository;
+        this.roleAuditRepository     = roleAuditRepository;
+        this.opportunityRepository   = opportunityRepository;
+        this.activityRepository      = activityRepository;
+        this.commentRepository       = commentRepository;
+        this.attachmentRepository    = attachmentRepository;
+        this.workspaceRepository     = workspaceRepository;
+        this.teamMemberService       = teamMemberService;
+        this.emailService            = emailService;
     }
 
     /**
@@ -82,9 +130,41 @@ public class AdminController {
 
         invited = authAccountRepository.save(invited);
 
+        String resetLink = createFirebaseUserAndResetLink(invited.getEmail());
+        String inviterName = admin.getDisplayName() != null ? admin.getDisplayName() : admin.getEmail();
+        emailService.sendInvitation(invited.getEmail(), invited.getDisplayName(),
+                invited.getRole().name(), inviterName, resetLink);
+
         // Return the full team-member profile shape so the frontend can add the row to the table
         TeamMemberResponse profile = teamMemberService.getMember(invited.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(profile);
+    }
+
+    /**
+     * Creates a Firebase Auth user for the invited email (if one doesn't already exist)
+     * and returns a one-time password-reset link they can use to set their password.
+     * Returns null on failure so the invite still succeeds even if Firebase is unavailable.
+     */
+    private String createFirebaseUserAndResetLink(String email) {
+        try {
+            try {
+                FirebaseAuth.getInstance().createUser(
+                        new UserRecord.CreateRequest()
+                                .setEmail(email)
+                                .setEmailVerified(false)
+                                .setDisabled(false)
+                );
+            } catch (FirebaseAuthException e) {
+                // EMAIL_ALREADY_EXISTS is fine — user may have had a prior Firebase account
+                if (e.getAuthErrorCode() != com.google.firebase.auth.AuthErrorCode.EMAIL_ALREADY_EXISTS) {
+                    log.warn("Could not create Firebase user for {}: {}", email, e.getMessage());
+                }
+            }
+            return FirebaseAuth.getInstance().generatePasswordResetLink(email);
+        } catch (FirebaseAuthException e) {
+            log.error("Could not generate password reset link for {}: {}", email, e.getMessage());
+            return null;
+        }
     }
 
     /**
@@ -136,5 +216,64 @@ public class AdminController {
 
         return ResponseEntity.ok(Map.of("message",
                 "Account '" + target.getEmail() + "' reactivated successfully."));
+    }
+
+    /**
+     * DELETE /api/admin/users/{id}
+     *
+     * Permanently removes a pending (never-activated) invite.
+     * Only allowed for accounts that have never signed in (no firebase_uid).
+     * Also deletes the corresponding Firebase Auth user if one was created.
+     */
+    @DeleteMapping("/users/{id}")
+    @PreAuthorize("@perms.can('ADMIN_MANAGE')")
+    @Transactional
+    public ResponseEntity<?> deleteInvite(@PathVariable Long id,
+                                          @AuthenticationPrincipal AuthAccount admin) {
+        if (id.equals(admin.getId())) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "You cannot delete your own account."));
+        }
+
+        AuthAccount target = authAccountRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Account not found: " + id));
+
+        // 1. Null out FK references where the data should be preserved
+        authAccountRepository.nullManagerByAccountId(id);
+        workspaceRepository.nullCreatedByByAccountId(id);
+        opportunityRepository.nullAssignedToByAccountId(id);
+        activityRepository.nullAssignedToByAccountId(id);
+        commentRepository.nullAuthorByAccountId(id);
+        attachmentRepository.nullUploaderByAccountId(id);
+        roleAuditRepository.nullActorByAccountId(id);
+
+        // 2. Delete child records that are tied to this account
+        roleAuditRepository.deleteByTargetAccountId(id);
+        recordShareRepository.deleteBySharedWithId(id);
+        refreshTokenRepository.deleteByAuthAccountId(id);
+        membershipRepository.deleteByAccountId(id);
+
+        // 3. Remove from Firebase Auth if a user was created
+        if (target.getFirebaseUid() != null) {
+            try {
+                FirebaseAuth.getInstance().deleteUser(target.getFirebaseUid());
+            } catch (FirebaseAuthException e) {
+                log.warn("Could not delete Firebase user {}: {}", target.getFirebaseUid(), e.getMessage());
+            }
+        } else {
+            // May have been pre-created by the invite flow without UID being stored
+            try {
+                String uid = FirebaseAuth.getInstance().getUserByEmail(target.getEmail()).getUid();
+                FirebaseAuth.getInstance().deleteUser(uid);
+            } catch (FirebaseAuthException e) {
+                log.debug("No Firebase user found for {}", target.getEmail());
+            }
+        }
+
+        // 4. Delete the account itself
+        authAccountRepository.delete(target);
+
+        return ResponseEntity.ok(Map.of("message",
+                "Account '" + target.getEmail() + "' deleted successfully."));
     }
 }

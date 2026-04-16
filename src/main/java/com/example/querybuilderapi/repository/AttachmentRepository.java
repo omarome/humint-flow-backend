@@ -14,4 +14,8 @@ public interface AttachmentRepository extends JpaRepository<Attachment, UUID> {
             String entityType, UUID entityId);
 
     long countByEntityTypeAndEntityIdAndIsDeletedFalse(String entityType, UUID entityId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("UPDATE Attachment a SET a.uploader = null WHERE a.uploader.id = :accountId")
+    void nullUploaderByAccountId(@org.springframework.data.repository.query.Param("accountId") Long accountId);
 }
