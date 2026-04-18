@@ -35,6 +35,7 @@ public class CreateTaskActionExecutor implements ActionExecutor {
         task.setBody(description);
         task.setEntityType(EntityType.OPPORTUNITY);
         task.setEntityId(opp.getId());
+        task.setWorkspace(opp.getWorkspace());
 
         activityRepository.save(task);
     }
