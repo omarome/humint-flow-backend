@@ -9,6 +9,7 @@ import com.example.querybuilderapi.model.Notification;
 import com.example.querybuilderapi.model.Opportunity;
 import com.example.querybuilderapi.model.Organization;
 import com.example.querybuilderapi.model.User;
+import com.example.querybuilderapi.model.Workspace;
 import com.example.querybuilderapi.repository.ActivityRepository;
 import com.example.querybuilderapi.repository.AuthAccountRepository;
 import com.example.querybuilderapi.repository.ContactRepository;
@@ -17,6 +18,7 @@ import com.example.querybuilderapi.repository.OpportunityRepository;
 import com.example.querybuilderapi.repository.OrganizationRepository;
 import com.example.querybuilderapi.repository.UserRepository;
 import com.example.querybuilderapi.repository.VariableRepository;
+import com.example.querybuilderapi.repository.WorkspaceRepository;
 import com.example.querybuilderapi.model.Variable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +58,7 @@ public class DataInitializer {
                                       ActivityRepository activityRepository,
                                       UserRepository userRepository,
                                       VariableRepository variableRepository,
+                                      WorkspaceRepository workspaceRepository,
                                       PasswordEncoder passwordEncoder) {
         return args -> {
             // Seed Admin
@@ -152,6 +155,14 @@ public class DataInitializer {
             // Seed CRM Demo Data
             if (orgRepository.count() == 0) {
                 log.info("Seeding CRM demo data...");
+
+                // All CRM records are workspace-scoped (workspace_id NOT NULL, enforced by
+                // V3__workspaces.sql). Attach every seeded record to the default workspace,
+                // which V3 creates with slug 'default'.
+                Workspace defaultWs = workspaceRepository.findBySlug("default").orElseThrow(() ->
+                    new IllegalStateException(
+                        "Default workspace not found — V3__workspaces.sql must run before demo seeding"));
+
                 List<User> team = userRepository.findAll();
                 User manager = team.isEmpty() ? null : team.get(0);
                 User rep = team.size() > 1 ? team.get(1) : manager;
@@ -185,6 +196,7 @@ public class DataInitializer {
                 globex.setCreatedBy(admin.getId());
                 globex.setUpdatedBy(admin.getId());
                 globex.setAssignedTo(manager);
+                globex.setWorkspace(defaultWs);
                 orgRepository.save(globex);
 
                 Contact hank = new Contact();
@@ -197,6 +209,7 @@ public class DataInitializer {
                 hank.setAssignedTo(manager);
                 hank.setCreatedBy(admin.getId());
                 hank.setUpdatedBy(admin.getId());
+                hank.setWorkspace(defaultWs);
                 contactRepository.save(hank);
 
                 Opportunity globexOpp1 = new Opportunity();
@@ -210,6 +223,7 @@ public class DataInitializer {
                 globexOpp1.setAssignedTo(salesRep);
                 globexOpp1.setCreatedBy(admin.getId());
                 globexOpp1.setUpdatedBy(admin.getId());
+                globexOpp1.setWorkspace(defaultWs);
                 oppRepository.save(globexOpp1);
 
                 // --- Organization 2: Acme Systems ---
@@ -223,6 +237,7 @@ public class DataInitializer {
                 acme.setCreatedBy(admin.getId());
                 acme.setUpdatedBy(admin.getId());
                 acme.setAssignedTo(rep);
+                acme.setWorkspace(defaultWs);
                 orgRepository.save(acme);
 
                 Contact alice = new Contact();
@@ -235,6 +250,7 @@ public class DataInitializer {
                 alice.setAssignedTo(rep);
                 alice.setCreatedBy(admin.getId());
                 alice.setUpdatedBy(admin.getId());
+                alice.setWorkspace(defaultWs);
                 contactRepository.save(alice);
 
                 Opportunity acmeOpp1 = new Opportunity();
@@ -248,62 +264,63 @@ public class DataInitializer {
                 acmeOpp1.setAssignedTo(juniorRep);
                 acmeOpp1.setCreatedBy(admin.getId());
                 acmeOpp1.setUpdatedBy(admin.getId());
+                acmeOpp1.setWorkspace(defaultWs);
                 oppRepository.save(acmeOpp1);
 
                 // ─── Seed Activities ──────────────────────────────────────────
                 log.info("Seeding demo activities...");
 
                 // Activities on Globex Organization
-                seedActivity(activityRepository, ActivityType.NOTE, EntityType.ORGANIZATION, globex.getId(),
+                seedActivity(activityRepository, defaultWs, ActivityType.NOTE, EntityType.ORGANIZATION, globex.getId(),
                     "Initial Assessment", "Reviewed Globex's annual report. Strong growth in Q3.", admin.getId(),
                     LocalDateTime.now().minusDays(10));
-                seedActivity(activityRepository, ActivityType.CALL, EntityType.ORGANIZATION, globex.getId(),
+                seedActivity(activityRepository, defaultWs, ActivityType.CALL, EntityType.ORGANIZATION, globex.getId(),
                     "Introductory Call with COO", "Discussed partnership options. 30 min call.", admin.getId(),
                     LocalDateTime.now().minusDays(7));
-                seedActivity(activityRepository, ActivityType.EMAIL, EntityType.ORGANIZATION, globex.getId(),
+                seedActivity(activityRepository, defaultWs, ActivityType.EMAIL, EntityType.ORGANIZATION, globex.getId(),
                     "Proposal Follow-up", "Sent revised pricing proposal to leadership team.", admin.getId(),
                     LocalDateTime.now().minusDays(3));
 
                 // Activities on Hank (Contact)
-                seedActivity(activityRepository, ActivityType.MEETING, EntityType.CONTACT, hank.getId(),
+                seedActivity(activityRepository, defaultWs, ActivityType.MEETING, EntityType.CONTACT, hank.getId(),
                     "Lunch Meeting with Hank", "Met at The Capital Grille. Discussed timelines.", admin.getId(),
                     LocalDateTime.now().minusDays(5));
-                seedActivity(activityRepository, ActivityType.NOTE, EntityType.CONTACT, hank.getId(),
+                seedActivity(activityRepository, defaultWs, ActivityType.NOTE, EntityType.CONTACT, hank.getId(),
                     "Key Decision Maker", "Hank confirmed he has final sign-off authority.", admin.getId(),
                     LocalDateTime.now().minusDays(4));
-                seedActivity(activityRepository, ActivityType.TASK, EntityType.CONTACT, hank.getId(),
+                seedActivity(activityRepository, defaultWs, ActivityType.TASK, EntityType.CONTACT, hank.getId(),
                     "Send Contract to Hank", "Prepare and email the MSA by Friday.", admin.getId(),
                     LocalDateTime.now().minusDays(1));
 
                 // Activities on Globex Opportunity
-                seedActivity(activityRepository, ActivityType.NOTE, EntityType.OPPORTUNITY, globexOpp1.getId(),
+                seedActivity(activityRepository, defaultWs, ActivityType.NOTE, EntityType.OPPORTUNITY, globexOpp1.getId(),
                     "Pricing Approved", "Client accepted the $250K budget. Moving to legal review.", admin.getId(),
                     LocalDateTime.now().minusDays(2));
-                seedActivity(activityRepository, ActivityType.EMAIL, EntityType.OPPORTUNITY, globexOpp1.getId(),
+                seedActivity(activityRepository, defaultWs, ActivityType.EMAIL, EntityType.OPPORTUNITY, globexOpp1.getId(),
                     "Legal Review Request", "Sent contract to legal@globex for review.", admin.getId(),
                     LocalDateTime.now().minusDays(1));
 
                 // Activities on Acme Organization
-                seedActivity(activityRepository, ActivityType.NOTE, EntityType.ORGANIZATION, acme.getId(),
+                seedActivity(activityRepository, defaultWs, ActivityType.NOTE, EntityType.ORGANIZATION, acme.getId(),
                     "Company Research", "Acme recently secured Series C funding. Good timing.", admin.getId(),
                     LocalDateTime.now().minusDays(14));
-                seedActivity(activityRepository, ActivityType.CALL, EntityType.ORGANIZATION, acme.getId(),
+                seedActivity(activityRepository, defaultWs, ActivityType.CALL, EntityType.ORGANIZATION, acme.getId(),
                     "Discovery Call", "15 min intro call with VP of Engineering.", admin.getId(),
                     LocalDateTime.now().minusDays(8));
 
                 // Activities on Alice (Contact)
-                seedActivity(activityRepository, ActivityType.EMAIL, EntityType.CONTACT, alice.getId(),
+                seedActivity(activityRepository, defaultWs, ActivityType.EMAIL, EntityType.CONTACT, alice.getId(),
                     "Introduction Email", "Sent intro deck and case studies.", admin.getId(),
                     LocalDateTime.now().minusDays(12));
-                seedActivity(activityRepository, ActivityType.MEETING, EntityType.CONTACT, alice.getId(),
+                seedActivity(activityRepository, defaultWs, ActivityType.MEETING, EntityType.CONTACT, alice.getId(),
                     "Video Call Demo", "45 min product demo via Zoom. Very engaged.", admin.getId(),
                     LocalDateTime.now().minusDays(6));
 
                 // Activities on Acme Opportunity
-                seedActivity(activityRepository, ActivityType.NOTE, EntityType.OPPORTUNITY, acmeOpp1.getId(),
+                seedActivity(activityRepository, defaultWs, ActivityType.NOTE, EntityType.OPPORTUNITY, acmeOpp1.getId(),
                     "Budget Discussion", "Alice mentioned $50K-$100K budget range for cloud migration.", admin.getId(),
                     LocalDateTime.now().minusDays(4));
-                seedActivity(activityRepository, ActivityType.TASK, EntityType.OPPORTUNITY, acmeOpp1.getId(),
+                seedActivity(activityRepository, defaultWs, ActivityType.TASK, EntityType.OPPORTUNITY, acmeOpp1.getId(),
                     "Prepare Technical Proposal", "Create custom architecture doc for Acme's infrastructure.", admin.getId(),
                     LocalDateTime.now().minusDays(1));
 
@@ -316,7 +333,7 @@ public class DataInitializer {
                 log.info("Seeding activities for existing CRM data...");
                 List<Organization> orgs = orgRepository.findAll();
                 for (Organization org : orgs) {
-                    seedActivity(activityRepository, ActivityType.NOTE, EntityType.ORGANIZATION, org.getId(),
+                    seedActivity(activityRepository, org.getWorkspace(), ActivityType.NOTE, EntityType.ORGANIZATION, org.getId(),
                         "Initial Review", "Reviewed " + org.getName() + "'s profile and market position.", admin.getId(),
                         LocalDateTime.now().minusDays(5));
                 }
@@ -369,10 +386,11 @@ public class DataInitializer {
         return n;
     }
 
-    private void seedActivity(ActivityRepository repo, ActivityType activityType, EntityType entityType,
-                              java.util.UUID entityId, String subject, String body, Long createdBy,
-                              LocalDateTime createdAt) {
+    private void seedActivity(ActivityRepository repo, Workspace workspace, ActivityType activityType,
+                              EntityType entityType, java.util.UUID entityId, String subject, String body,
+                              Long createdBy, LocalDateTime createdAt) {
         Activity a = new Activity();
+        a.setWorkspace(workspace);
         a.setActivityType(activityType);
         a.setEntityType(entityType);
         a.setEntityId(entityId);

@@ -83,10 +83,12 @@
             <artifactId>spring-data-envers</artifactId>
         </dependency>
 
-        <!-- PostgreSQL Driver -->
+        <!-- PostgreSQL Driver (pinned; previously inherited from the Spring Boot BOM
+             via the now-removed spring-cloud-gcp starter) -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
+            <version>42.7.4</version>
             <scope>runtime</scope>
         </dependency>
 
@@ -129,13 +131,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
-        </dependency>
-
-        <!-- Cloud SQL Connector — Unix socket connection from Cloud Run to Cloud SQL -->
-        <dependency>
-            <groupId>com.google.cloud</groupId>
-            <artifactId>spring-cloud-gcp-starter-sql-postgresql</artifactId>
-            <version>4.8.4</version>
         </dependency>
     </dependencies>
 
