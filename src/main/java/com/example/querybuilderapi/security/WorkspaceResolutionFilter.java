@@ -88,17 +88,13 @@ public class WorkspaceResolutionFilter extends OncePerRequestFilter {
             return;
         }
 
-        // SUPER_ADMIN bypass — can access any workspace without membership
+        // SUPER_ADMIN bypass — can access any workspace without membership.
+        // Still resolve a concrete workspace id (header → oldest membership) so
+        // writes during the request have a workspace to attach records to.
         if (account.getRole() == AuthAccount.Role.SUPER_ADMIN) {
             workspaceContext.setSuperAdminBypass(true);
             workspaceContext.setEffectiveRole(AuthAccount.Role.SUPER_ADMIN);
-
-            String headerWsId = request.getHeader(WORKSPACE_HEADER);
-            if (headerWsId != null) {
-                try {
-                    workspaceContext.setWorkspaceId(Long.parseLong(headerWsId));
-                } catch (NumberFormatException ignored) {}
-            }
+            workspaceContext.setWorkspaceId(resolveWorkspaceId(request, account.getId()));
             chain.doFilter(request, response);
             return;
         }

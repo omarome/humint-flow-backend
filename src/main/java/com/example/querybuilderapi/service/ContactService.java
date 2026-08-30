@@ -92,6 +92,7 @@ public class ContactService {
         // Resolve relationships
         resolveOrganization(request.getOrganizationId(), contact);
         resolveAssignee(request.getAssignedToId(), contact);
+        contact.setWorkspace(auditAwareService.getCurrentWorkspace());
 
         Long currentUserId = auditAwareService.getCurrentUserId();
         contact.setCreatedBy(currentUserId);

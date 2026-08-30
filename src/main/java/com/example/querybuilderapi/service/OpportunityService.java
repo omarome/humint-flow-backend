@@ -135,6 +135,7 @@ public class OpportunityService {
         resolveOrganization(request.getOrganizationId(), opp);
         resolveContact(request.getPrimaryContactId(), opp);
         resolveAssignee(request.getAssignedToId(), opp);
+        opp.setWorkspace(auditAwareService.getCurrentWorkspace());
 
         Long currentUserId = auditAwareService.getCurrentUserId();
         opp.setCreatedBy(currentUserId);

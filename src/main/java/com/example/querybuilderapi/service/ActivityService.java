@@ -73,6 +73,7 @@ public class ActivityService {
 
         Activity activity = new Activity();
         mapRequestToEntity(request, activity);
+        activity.setWorkspace(auditAwareService.getCurrentWorkspace());
 
         Long currentUserId = auditAwareService.getCurrentUserId();
         activity.setCreatedBy(currentUserId);
