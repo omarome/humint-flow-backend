@@ -97,7 +97,6 @@ public class DataInitializer {
                     new Variable(null, "position",   "Position",       28, "STRING",  null),
                     new Variable(null, "department", "Department",     32, "STRING",  null),
                     new Variable(null, "status",     "Account Status", 24, "STRING",  null),
-                    new Variable(null, "isOnline",   "Online Status",  12, "BOOL",    null),
 
                     // ── CONTACT fields ───────────────────────────────────────────
                     new Variable(null, "firstName",      "First Name",      1,  "STRING",  "CONTACT"),
