@@ -71,6 +71,7 @@ public class OrganizationService {
         Organization org = new Organization();
         mapRequestToEntity(request, org);
         resolveAssignee(request.getAssignedToId(), org);
+        org.setWorkspace(auditAwareService.getCurrentWorkspace());
 
         Long currentUserId = auditAwareService.getCurrentUserId();
         org.setCreatedBy(currentUserId);

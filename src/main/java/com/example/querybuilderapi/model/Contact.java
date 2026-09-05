@@ -36,7 +36,10 @@ public class Contact extends BaseEntity {
     @Size(max = 100)
     private String lastName;
 
-    @Column(unique = true)
+    // Not unique: the same person can be a contact under more than one
+    // organization, and a soft-deleted contact (is_deleted = true) keeps its
+    // row, so a global unique index would block ever re-adding that email.
+    @Column
     @Email(message = "Email should be valid")
     @Size(max = 255)
     private String email;

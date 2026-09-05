@@ -13,7 +13,7 @@ import java.time.Instant;
  */
 @Entity
 @Table(name = "auth_accounts")
-public class AuthAccount {
+public class AuthAccount implements java.security.Principal {
 
     public enum Role { USER, SUPER_ADMIN, ADMIN, MANAGER, SALES_REP, VIEWER, GUEST, WORKSPACE_OWNER }
     public enum OAuthProvider { LOCAL, GOOGLE, GITHUB, FIREBASE }
@@ -129,6 +129,20 @@ public class AuthAccount {
     }
 
     // --- Getters & Setters ---
+
+    /**
+     * {@link java.security.Principal#getName()} — the email address.
+     * Makes {@code Authentication.getName()} return the email (Spring's
+     * {@code UsernamePasswordAuthenticationToken.getName()} delegates to the
+     * principal when it is a {@link java.security.Principal}). Numerous
+     * controllers and {@code WorkspaceResolutionFilter} resolve the account by
+     * {@code auth.getName()}. Not persisted (field-access entity; also marked
+     * {@link Transient}) and not serialized ({@link com.fasterxml.jackson.annotation.JsonIgnore}).
+     */
+    @Override
+    @Transient
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public String getName() { return email; }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
