@@ -107,7 +107,10 @@ public final class RolePermissions {
                 Permission.TEAM_ROLE_ASSIGN,
                 Permission.NOTIFICATIONS_MANAGE,
                 Permission.ADMIN_INVITE,
-                Permission.ADMIN_MANAGE
+                Permission.ADMIN_MANAGE,
+                // Rename / re-slug / toggle public-private — NOT create or delete,
+                // which are reserved for SUPER_ADMIN and WORKSPACE_OWNER (below).
+                Permission.WORKSPACE_UPDATE
         ));
         m.put(AuthAccount.Role.ADMIN, admin);
 

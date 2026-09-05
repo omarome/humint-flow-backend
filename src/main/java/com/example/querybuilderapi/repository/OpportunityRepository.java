@@ -79,4 +79,7 @@ public interface OpportunityRepository extends JpaRepository<Opportunity, UUID>,
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.data.jpa.repository.Query("UPDATE Opportunity o SET o.assignedTo = null WHERE o.assignedTo.id = :accountId")
     void nullAssignedToByAccountId(@org.springframework.data.repository.query.Param("accountId") Long accountId);
+
+    /** Count non-deleted opportunities in a workspace — used to block deleting a non-empty workspace. */
+    long countByWorkspaceIdAndIsDeletedFalse(Long workspaceId);
 }

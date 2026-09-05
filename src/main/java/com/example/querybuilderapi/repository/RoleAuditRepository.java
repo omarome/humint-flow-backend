@@ -22,6 +22,9 @@ public interface RoleAuditRepository extends JpaRepository<RoleAudit, Long> {
 
     void deleteByTargetAccountId(Long accountId);
 
+    /** Delete all audit rows for a workspace — used when the workspace itself is deleted. */
+    void deleteByWorkspaceId(Long workspaceId);
+
     @Modifying
     @Query("UPDATE RoleAudit r SET r.actor = null WHERE r.actor.id = :accountId")
     void nullActorByAccountId(@Param("accountId") Long accountId);

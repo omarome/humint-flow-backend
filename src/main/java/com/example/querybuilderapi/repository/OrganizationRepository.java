@@ -51,4 +51,7 @@ public interface OrganizationRepository extends JpaRepository<Organization, UUID
      * Count non-deleted organizations.
      */
     long countByIsDeletedFalse();
+
+    /** Count non-deleted organizations in a workspace — used to block deleting a non-empty workspace. */
+    long countByWorkspaceIdAndIsDeletedFalse(Long workspaceId);
 }

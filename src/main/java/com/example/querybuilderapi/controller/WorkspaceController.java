@@ -19,8 +19,13 @@ import java.util.stream.Collectors;
 /**
  * REST controller for workspace lifecycle operations.
  *
- * All endpoints require authentication. Write operations are further gated
- * by {@link com.example.querybuilderapi.security.PermissionEvaluator} via @PreAuthorize.
+ * All endpoints require authentication. The {@code @PreAuthorize} on each
+ * method is a coarse, cheap gate (does the caller hold this permission
+ * *anywhere*, per their X-Workspace-Id-resolved context?). For any endpoint
+ * that targets a specific workspace via a path variable, the authoritative
+ * check is inside {@link WorkspaceService} — it verifies the caller actually
+ * holds the permission *in that workspace*, not merely in whichever workspace
+ * their header happens to resolve to.
  */
 @RestController
 @RequestMapping("/api")
@@ -55,6 +60,7 @@ public class WorkspaceController {
                 "id",        m.getWorkspace().getId(),
                 "name",      m.getWorkspace().getName(),
                 "slug",      m.getWorkspace().getSlug(),
+                "isPublic",  m.getWorkspace().isPublic(),
                 "role",      m.getRole().name(),
                 "joinedAt",  m.getJoinedAt().toString()
         )).collect(Collectors.toList());
@@ -64,8 +70,13 @@ public class WorkspaceController {
 
     // ── POST /api/workspaces — create workspace ───────────────────────────
 
+    /**
+     * Creates a new workspace. The caller becomes its WORKSPACE_OWNER.
+     * Restricted to SUPER_ADMIN and existing WORKSPACE_OWNERs — everyone else
+     * (ADMIN and below) cannot spin up new tenants.
+     */
     @PostMapping("/workspaces")
-    @PreAuthorize("@perms.can('ADMIN_MANAGE')")
+    @PreAuthorize("@perms.can('WORKSPACE_CREATE')")
     public ResponseEntity<Map<String, Object>> createWorkspace(
             @RequestBody Map<String, String> body,
             Authentication auth) {
@@ -80,10 +91,68 @@ public class WorkspaceController {
         Workspace ws = workspaceService.createWorkspace(name, slug, creator.getId());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-                "id",   ws.getId(),
-                "name", ws.getName(),
-                "slug", ws.getSlug()
+                "id",       ws.getId(),
+                "name",     ws.getName(),
+                "slug",     ws.getSlug(),
+                "isPublic", ws.isPublic()
         ));
+    }
+
+    // ── PATCH /api/workspaces/{id} — rename / re-slug / visibility ────────
+
+    /**
+     * Updates a workspace's name, slug, and/or public/private visibility.
+     * Only non-null fields in the request body are applied.
+     *
+     * Requires WORKSPACE_UPDATE *in this specific workspace* (SUPER_ADMIN,
+     * or WORKSPACE_OWNER/ADMIN of this workspace) — enforced in
+     * {@link WorkspaceService#updateWorkspace}, not by this method's
+     * {@code @PreAuthorize} alone.
+     */
+    @PatchMapping("/workspaces/{workspaceId}")
+    @PreAuthorize("@perms.can('WORKSPACE_UPDATE')")
+    public ResponseEntity<Map<String, Object>> updateWorkspace(
+            @PathVariable Long workspaceId,
+            @RequestBody Map<String, Object> body,
+            Authentication auth) {
+
+        String name = (String) body.get("name");
+        String slug = (String) body.get("slug");
+        Boolean isPublic = body.get("isPublic") == null ? null : Boolean.valueOf(body.get("isPublic").toString());
+
+        AuthAccount caller = resolveAccount(auth);
+        Workspace ws = workspaceService.updateWorkspace(workspaceId, name, slug, isPublic, caller.getId());
+
+        return ResponseEntity.ok(Map.of(
+                "id",       ws.getId(),
+                "name",     ws.getName(),
+                "slug",     ws.getSlug(),
+                "isPublic", ws.isPublic()
+        ));
+    }
+
+    // ── DELETE /api/workspaces/{id} — permanently delete a workspace ──────
+
+    /**
+     * Permanently deletes a workspace. Refused if it still has any
+     * organizations, contacts, opportunities, or activities — remove or
+     * reassign that data first.
+     *
+     * Requires WORKSPACE_DELETE *in this specific workspace* (SUPER_ADMIN, or
+     * the WORKSPACE_OWNER of this workspace) — enforced in
+     * {@link WorkspaceService#deleteWorkspace}, not by this method's
+     * {@code @PreAuthorize} alone.
+     */
+    @DeleteMapping("/workspaces/{workspaceId}")
+    @PreAuthorize("@perms.can('WORKSPACE_DELETE')")
+    public ResponseEntity<Map<String, String>> deleteWorkspace(
+            @PathVariable Long workspaceId,
+            Authentication auth) {
+
+        AuthAccount caller = resolveAccount(auth);
+        workspaceService.deleteWorkspace(workspaceId, caller.getId());
+
+        return ResponseEntity.ok(Map.of("message", "Workspace deleted successfully"));
     }
 
     // ── GET /api/workspaces/{id}/members ─────────────────────────────────
@@ -91,9 +160,11 @@ public class WorkspaceController {
     @GetMapping("/workspaces/{workspaceId}/members")
     @PreAuthorize("@perms.can('TEAM_READ_ALL')")
     public ResponseEntity<List<Map<String, Object>>> getWorkspaceMembers(
-            @PathVariable Long workspaceId) {
+            @PathVariable Long workspaceId,
+            Authentication auth) {
 
-        List<WorkspaceMembership> members = workspaceService.getWorkspaceMembers(workspaceId);
+        AuthAccount caller = resolveAccount(auth);
+        List<WorkspaceMembership> members = workspaceService.getWorkspaceMembers(workspaceId, caller.getId());
 
         List<Map<String, Object>> result = members.stream().map(m -> {
             AuthAccount a = m.getAccount();
@@ -116,7 +187,8 @@ public class WorkspaceController {
     @PreAuthorize("@perms.can('ADMIN_INVITE')")
     public ResponseEntity<Map<String, Object>> addMember(
             @PathVariable Long workspaceId,
-            @RequestBody Map<String, String> body) {
+            @RequestBody Map<String, String> body,
+            Authentication auth) {
 
         Long accountId = Long.parseLong(body.getOrDefault("accountId", "0"));
         AuthAccount.Role role;
@@ -126,7 +198,8 @@ public class WorkspaceController {
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid role: " + body.get("role")));
         }
 
-        WorkspaceMembership membership = workspaceService.addMember(workspaceId, accountId, role);
+        AuthAccount caller = resolveAccount(auth);
+        WorkspaceMembership membership = workspaceService.addMember(workspaceId, accountId, role, caller.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "workspaceId", workspaceId,
                 "accountId",   accountId,
@@ -140,9 +213,11 @@ public class WorkspaceController {
     @PreAuthorize("@perms.can('ADMIN_MANAGE')")
     public ResponseEntity<Map<String, String>> removeMember(
             @PathVariable Long workspaceId,
-            @PathVariable Long accountId) {
+            @PathVariable Long accountId,
+            Authentication auth) {
 
-        workspaceService.removeMember(workspaceId, accountId);
+        AuthAccount caller = resolveAccount(auth);
+        workspaceService.removeMember(workspaceId, accountId, caller.getId());
         return ResponseEntity.ok(Map.of("message", "Member removed from workspace"));
     }
 
@@ -153,7 +228,8 @@ public class WorkspaceController {
     public ResponseEntity<Map<String, Object>> changeMemberRole(
             @PathVariable Long workspaceId,
             @PathVariable Long accountId,
-            @RequestBody Map<String, String> body) {
+            @RequestBody Map<String, String> body,
+            Authentication auth) {
 
         AuthAccount.Role newRole;
         try {
@@ -162,7 +238,8 @@ public class WorkspaceController {
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid role: " + body.get("role")));
         }
 
-        WorkspaceMembership updated = workspaceService.changeMemberRole(workspaceId, accountId, newRole);
+        AuthAccount caller = resolveAccount(auth);
+        WorkspaceMembership updated = workspaceService.changeMemberRole(workspaceId, accountId, newRole, caller.getId());
         return ResponseEntity.ok(Map.of(
                 "workspaceId", workspaceId,
                 "accountId",   accountId,

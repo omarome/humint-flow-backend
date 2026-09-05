@@ -97,4 +97,12 @@ public enum Permission {
     ADMIN_INVITE,
     /** Deactivate or reactivate an account. */
     ADMIN_MANAGE,
+
+    // ── Workspace lifecycle ────────────────────────────────────────────────────
+    /** Create a new workspace (tenant). */
+    WORKSPACE_CREATE,
+    /** Rename a workspace, change its slug, or its public/private visibility. */
+    WORKSPACE_UPDATE,
+    /** Permanently delete a workspace. */
+    WORKSPACE_DELETE,
 }

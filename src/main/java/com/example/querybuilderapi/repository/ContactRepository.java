@@ -63,4 +63,7 @@ public interface ContactRepository extends JpaRepository<Contact, UUID>, JpaSpec
      * Count non-deleted contacts.
      */
     long countByIsDeletedFalse();
+
+    /** Count non-deleted contacts in a workspace — used to block deleting a non-empty workspace. */
+    long countByWorkspaceIdAndIsDeletedFalse(Long workspaceId);
 }

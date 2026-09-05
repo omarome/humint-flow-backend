@@ -18,6 +18,9 @@ public interface WorkspaceRepository extends JpaRepository<Workspace, Long> {
     /** Check if a workspace with the given slug already exists. */
     boolean existsBySlug(String slug);
 
+    /** Check if another workspace already has this slug (excludes the given id — used on rename). */
+    boolean existsBySlugAndIdNot(String slug, Long id);
+
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.data.jpa.repository.Query("UPDATE Workspace w SET w.createdBy = null WHERE w.createdBy.id = :accountId")
     void nullCreatedByByAccountId(@org.springframework.data.repository.query.Param("accountId") Long accountId);

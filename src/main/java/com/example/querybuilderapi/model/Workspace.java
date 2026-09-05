@@ -34,6 +34,15 @@ public class Workspace {
     @JoinColumn(name = "created_by")
     private AuthAccount createdBy;
 
+    /**
+     * Visibility flag: {@code true} = discoverable (e.g. joinable / listed to
+     * prospective members), {@code false} = private / invite-only. Defaults to
+     * private. Does not affect data isolation — membership still gates all
+     * CRM data access regardless of this flag.
+     */
+    @Column(name = "is_public", nullable = false)
+    private boolean isPublic = false;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
@@ -63,6 +72,9 @@ public class Workspace {
 
     public AuthAccount getCreatedBy()                    { return createdBy; }
     public void setCreatedBy(AuthAccount createdBy)      { this.createdBy = createdBy; }
+
+    public boolean isPublic()                            { return isPublic; }
+    public void setPublic(boolean isPublic)              { this.isPublic = isPublic; }
 
     public Instant getCreatedAt()          { return createdAt; }
     public Instant getUpdatedAt()          { return updatedAt; }

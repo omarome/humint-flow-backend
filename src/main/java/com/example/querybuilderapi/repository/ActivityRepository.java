@@ -51,4 +51,7 @@ public interface ActivityRepository extends JpaRepository<Activity, UUID>, JpaSp
      * Paginated version — used by CalendarView and any global activity feed.
      */
     Page<Activity> findAllByIsDeletedFalse(Pageable pageable);
+
+    /** Count non-deleted activities in a workspace — used to block deleting a non-empty workspace. */
+    long countByWorkspaceIdAndIsDeletedFalse(Long workspaceId);
 }

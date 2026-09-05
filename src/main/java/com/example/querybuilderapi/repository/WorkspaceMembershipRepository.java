@@ -39,6 +39,9 @@ public interface WorkspaceMembershipRepository extends JpaRepository<WorkspaceMe
     /** Delete all workspace memberships for a given account (used before account deletion). */
     void deleteByAccountId(Long accountId);
 
+    /** Delete all memberships in a workspace — used when the workspace itself is deleted. */
+    void deleteByWorkspaceId(Long workspaceId);
+
     /**
      * Count WORKSPACE_OWNER members in a workspace.
      * Used to guard against removing the last owner.

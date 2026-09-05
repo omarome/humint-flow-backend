@@ -57,4 +57,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(Map.of("error", "Access denied. You do not have permission to perform this action."));
     }
+
+    /**
+     * Handle valid-but-blocked state transitions (e.g. removing the last
+     * WORKSPACE_OWNER, deleting a workspace that still has data).
+     */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, String>> handleIllegalState(IllegalStateException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("error", ex.getMessage()));
+    }
 }
