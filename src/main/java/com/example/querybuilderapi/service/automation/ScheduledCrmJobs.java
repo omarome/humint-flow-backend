@@ -67,6 +67,7 @@ public class ScheduledCrmJobs {
                 task.setEntityType(EntityType.OPPORTUNITY);
                 task.setEntityId(opp.getId());
                 task.setTaskDueDate(LocalDate.now().plusDays(1));
+                task.setWorkspace(opp.getWorkspace());
                 activityRepository.save(task);
                 tasksCreated++;
 
@@ -131,6 +132,7 @@ public class ScheduledCrmJobs {
                 escalation.setEntityType(overdueTask.getEntityType());
                 escalation.setEntityId(overdueTask.getEntityId());
                 escalation.setTaskDueDate(LocalDate.now().plusDays(1));
+                escalation.setWorkspace(overdueTask.getWorkspace());
                 activityRepository.save(escalation);
                 escalationsCreated++;
             }
