@@ -2,6 +2,7 @@ package com.example.querybuilderapi.controller;
 
 import com.example.querybuilderapi.dto.TeamMemberResponse;
 import com.example.querybuilderapi.model.AuthAccount;
+import com.example.querybuilderapi.security.PermissionEvaluator;
 import com.example.querybuilderapi.service.FirebaseClaimsService;
 import com.example.querybuilderapi.service.TeamMemberService;
 import com.example.querybuilderapi.service.TeamMemberService.TeamMemberUpdateRequest;
@@ -15,9 +16,11 @@ import java.util.List;
  * REST API for the Team Management module.
  *
  * Endpoints:
- *   GET    /api/team          — list active members (ADMIN / MANAGER)
+ *   GET    /api/team          — list active members (TEAM_READ — GUEST and above;
+ *                               role field redacted unless caller has TEAM_READ_ALL)
  *   GET    /api/team/all      — list all members including inactive (ADMIN only)
- *   GET    /api/team/{id}     — get single member profile (authenticated)
+ *   GET    /api/team/{id}     — get single member profile (authenticated;
+ *                               role field redacted unless caller has TEAM_READ_ALL)
  *   PATCH  /api/team/{id}     — update profile / role / status (ADMIN / MANAGER)
  */
 @RestController
@@ -26,18 +29,27 @@ public class TeamMemberController {
 
     private final TeamMemberService teamMemberService;
     private final FirebaseClaimsService firebaseClaimsService;
+    private final PermissionEvaluator perms;
 
     public TeamMemberController(TeamMemberService teamMemberService,
-                                FirebaseClaimsService firebaseClaimsService) {
+                                FirebaseClaimsService firebaseClaimsService,
+                                PermissionEvaluator perms) {
         this.teamMemberService    = teamMemberService;
         this.firebaseClaimsService = firebaseClaimsService;
+        this.perms                = perms;
     }
 
-    /** Lists all active team members with deal + activity counts. */
+    /**
+     * Lists all active team members with deal + activity counts.
+     * TEAM_READ is granted down to GUEST — deliberately, so any signed-in user
+     * can see "who to contact". Each member's internal role (ADMIN, SUPER_ADMIN,
+     * etc.) is only meaningful to someone who manages the team, so it's stripped
+     * out unless the caller holds TEAM_READ_ALL (MANAGER and above).
+     */
     @GetMapping
     @PreAuthorize("@perms.can('TEAM_READ')")
     public ResponseEntity<List<TeamMemberResponse>> listActiveMembers() {
-        return ResponseEntity.ok(teamMemberService.listActiveMembers());
+        return ResponseEntity.ok(redactRoleIfNeeded(teamMemberService.listActiveMembers()));
     }
 
     /** Lists all team members including inactive (admin-only view). */
@@ -47,11 +59,23 @@ public class TeamMemberController {
         return ResponseEntity.ok(teamMemberService.listAllMembers());
     }
 
-    /** Gets the full profile of a single team member. */
+    /** Gets the full profile of a single team member. Role redacted — see {@link #listActiveMembers()}. */
     @GetMapping("/{id}")
     @PreAuthorize("@perms.can('TEAM_READ')")
     public ResponseEntity<TeamMemberResponse> getMember(@PathVariable Long id) {
-        return ResponseEntity.ok(teamMemberService.getMember(id));
+        TeamMemberResponse member = teamMemberService.getMember(id);
+        if (!perms.can("TEAM_READ_ALL")) {
+            member.setRole(null);
+        }
+        return ResponseEntity.ok(member);
+    }
+
+    /** Strips the {@code role} field from every entry unless the caller can see everyone's role. */
+    private List<TeamMemberResponse> redactRoleIfNeeded(List<TeamMemberResponse> members) {
+        if (!perms.can("TEAM_READ_ALL")) {
+            members.forEach(m -> m.setRole(null));
+        }
+        return members;
     }
 
     /**
