@@ -2,12 +2,18 @@ package com.example.querybuilderapi.service;
 
 import com.example.querybuilderapi.exception.AccountNotInvitedException;
 import com.example.querybuilderapi.model.AuthAccount;
+import com.example.querybuilderapi.model.Workspace;
+import com.example.querybuilderapi.model.WorkspaceMembership;
 import com.example.querybuilderapi.repository.AuthAccountRepository;
+import com.example.querybuilderapi.repository.WorkspaceMembershipRepository;
+import com.example.querybuilderapi.repository.WorkspaceRepository;
 import com.google.firebase.auth.FirebaseToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Map;
 
 /**
  * Syncs Firebase users into the local {@code auth_accounts} table.
@@ -16,21 +22,32 @@ import org.springframework.transaction.annotation.Transactional;
  *   1. {@code firebase_uid} already linked  → return the existing account (fast path).
  *   2. Email matches a pre-provisioned (invited) account  → link the UID, activate the
  *      account, and return it.  This is how an invited user gets their first session.
- *   3. No match at all  → throw {@link AccountNotInvitedException}.
- *      Auto-creating SALES_REP accounts on first sign-in is intentionally disabled.
- *      An ADMIN must call {@code POST /api/admin/invite} first.
+ *   3. No match, but the token is a Google sign-in  → auto-provision a read-only
+ *      {@code VIEWER} account in the {@code default} workspace. Anyone can arrive with
+ *      a Google account, so this is the "look around" tier, not a write-capable one.
+ *   4. No match, any other sign-in method (email/password, etc.)  → throw
+ *      {@link AccountNotInvitedException}. Self-service account creation via anything
+ *      other than Google is still invite-only.
  */
 @Service
 public class FirebaseUserSyncService {
 
     private static final Logger log = LoggerFactory.getLogger(FirebaseUserSyncService.class);
 
+    private static final String DEFAULT_WORKSPACE_SLUG = "default";
+
     private final AuthAccountRepository authAccountRepository;
+    private final WorkspaceRepository workspaceRepository;
+    private final WorkspaceMembershipRepository workspaceMembershipRepository;
     private final FirebaseClaimsService firebaseClaimsService;
 
     public FirebaseUserSyncService(AuthAccountRepository authAccountRepository,
+                                   WorkspaceRepository workspaceRepository,
+                                   WorkspaceMembershipRepository workspaceMembershipRepository,
                                    FirebaseClaimsService firebaseClaimsService) {
         this.authAccountRepository = authAccountRepository;
+        this.workspaceRepository = workspaceRepository;
+        this.workspaceMembershipRepository = workspaceMembershipRepository;
         this.firebaseClaimsService  = firebaseClaimsService;
     }
 
@@ -38,35 +55,44 @@ public class FirebaseUserSyncService {
      * Resolves the {@link AuthAccount} for the given verified Firebase ID token.
      *
      * @param token the verified Firebase ID token (never null)
-     * @return the linked or newly activated AuthAccount
-     * @throws AccountNotInvitedException if no pre-provisioned account exists for the email
+     * @return the linked, newly activated, or newly auto-provisioned AuthAccount
+     * @throws AccountNotInvitedException if no pre-provisioned account exists for the
+     *         email and the sign-in method isn't Google
      */
     @Transactional
     public AuthAccount syncUser(FirebaseToken token) {
         String firebaseUid = token.getUid();
-        String email       = token.getEmail();
-        String photoUrl    = token.getPicture();
 
         // Fast path — already linked by UID
         return authAccountRepository.findByFirebaseUid(firebaseUid)
-                .orElseGet(() -> linkInvitedAccount(firebaseUid, email, photoUrl));
+                .orElseGet(() -> linkOrProvisionAccount(token));
     }
 
     // ─── Private helpers ─────────────────────────────────────────────────
 
-    /**
-     * Finds a pre-provisioned account by email and links it to the Firebase UID.
-     * Throws {@link AccountNotInvitedException} if no matching invited account exists —
-     * we no longer auto-create accounts on first sign-in.
-     */
-    private AuthAccount linkInvitedAccount(String firebaseUid, String email, String photoUrl) {
-        AuthAccount account = authAccountRepository.findByEmail(email)
-                .orElseThrow(() -> {
-                    log.warn("Firebase sign-in blocked for '{}' — no invited account found.", email);
-                    return new AccountNotInvitedException(email);
-                });
+    private AuthAccount linkOrProvisionAccount(FirebaseToken token) {
+        String email = token.getEmail();
 
-        log.info("Linking invited account '{}' to Firebase UID {}", email, firebaseUid);
+        return authAccountRepository.findByEmail(email)
+                .map(account -> linkInvitedAccount(account, token))
+                .orElseGet(() -> {
+                    if (isGoogleSignIn(token)) {
+                        return provisionViewerAccount(token);
+                    }
+                    log.warn("Firebase sign-in blocked for '{}' — no invited account found.", email);
+                    throw new AccountNotInvitedException(email);
+                });
+    }
+
+    /**
+     * Links a pre-provisioned account by email to the Firebase UID that just
+     * signed in with it, and activates it.
+     */
+    private AuthAccount linkInvitedAccount(AuthAccount account, FirebaseToken token) {
+        String firebaseUid = token.getUid();
+        String photoUrl    = token.getPicture();
+
+        log.info("Linking invited account '{}' to Firebase UID {}", account.getEmail(), firebaseUid);
 
         account.setFirebaseUid(firebaseUid);
         account.setOauthProvider(AuthAccount.OAuthProvider.FIREBASE);
@@ -80,5 +106,49 @@ public class FirebaseUserSyncService {
         firebaseClaimsService.syncClaims(account.getId());
 
         return account;
+    }
+
+    /**
+     * Auto-provisions a read-only VIEWER account (+ a matching {@code default}-workspace
+     * membership, since {@code WorkspaceResolutionFilter} rejects any non-SUPER_ADMIN
+     * account with no membership row) for a first-time Google sign-in with no
+     * pre-existing invite.
+     */
+    private AuthAccount provisionViewerAccount(FirebaseToken token) {
+        String email = token.getEmail();
+        log.info("Auto-provisioning VIEWER account for first-time Google sign-in: {}", email);
+
+        AuthAccount account = new AuthAccount();
+        account.setEmail(email);
+        account.setDisplayName(token.getName() != null ? token.getName() : email);
+        account.setRole(AuthAccount.Role.VIEWER);
+        account.setOauthProvider(AuthAccount.OAuthProvider.FIREBASE);
+        account.setIsActive(true);
+        account.setFirebaseUid(token.getUid());
+        account.setPhotoUrl(token.getPicture());
+        account = authAccountRepository.save(account);
+
+        Workspace defaultWorkspace = workspaceRepository.findBySlug(DEFAULT_WORKSPACE_SLUG)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Cannot auto-provision — '" + DEFAULT_WORKSPACE_SLUG + "' workspace not found"));
+        workspaceMembershipRepository.save(
+                new WorkspaceMembership(defaultWorkspace, account, AuthAccount.Role.VIEWER));
+
+        firebaseClaimsService.syncClaims(account.getId());
+
+        return account;
+    }
+
+    /**
+     * True when the verified token's sign-in method was Google (as opposed to
+     * email/password, GitHub, etc.) — read from the standard Firebase
+     * {@code firebase.sign_in_provider} claim.
+     */
+    private boolean isGoogleSignIn(FirebaseToken token) {
+        Object firebaseClaim = token.getClaims().get("firebase");
+        if (firebaseClaim instanceof Map<?, ?> map) {
+            return "google.com".equals(map.get("sign_in_provider"));
+        }
+        return false;
     }
 }
